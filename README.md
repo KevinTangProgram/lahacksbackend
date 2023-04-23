@@ -4,7 +4,8 @@
 
 *Developed by Aaron Kwan, Kevin Tang, and Faustine Wang for LA Hacks 2023.*
 
-Note: This is one repository out of 3. Here are the links:
-- https://github.com/KevinTangProgram/lahacksfrontend
-- https://github.com/KevinTangProgram/lahacksbackend
-- https://github.com/aaronkwan/lahacksMisc
+Note: This is one repository out of 4. Here are the links:
+- [Master Repo](https://github.com/KevinTangProgram/lahacks2023)
+- [Frontend Repo](https://github.com/KevinTangProgram/lahacksfrontend)
+- [Backend Repo](https://github.com/KevinTangProgram/lahacksbackend)
+- [Co:here Training Files](https://github.com/aaronkwan/lahacksMisc)
