@@ -73,7 +73,9 @@ app.put('/api/cohere', async (req, res) => {
     " Format the document as headers separated by whitespace with dashes to represent bullet points: \n";
     for (let i = 0; i < req.body.input.length; i++)
     {
-        message += req.body.input[i] + ' ';
+        let input = req.body.input[i];
+        input = input.replace(/<br>/g, '\n');
+        message += input + ' ';
     }
     message = message.substring(0, message.length - 1);
 
