@@ -63,7 +63,7 @@ app.post('/new/account', async (req, res) => {
 app.put('/api/cohere', async (req, res) => {
   // Call the cohere.generate function
 
-    const feed = "";
+    let feed = "";
     if (req.body.id !== "")
     {
         feed = await User.findById(req.body.id);
