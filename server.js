@@ -132,7 +132,7 @@ app.get('/email', async (req, res) => {
     {
         const feed = await User.findById(req.query.id);
         const message = "Hello,\n\n" + "Below are the documents that you requested.\n\nSincerely, AFK\n\n";
-        const longMessage = "";
+        let longMessage = "";
         for (let i = 0; i < feed.messages.length; i++)
         {
             if (i % 2 === 0)
@@ -151,9 +151,9 @@ app.get('/email', async (req, res) => {
         }
         const options = {
             from: "ideaoasis@zohomail.com",
-            to: req.body.name,
+            to: feed.name,
             subject: "Idea Oasis - Data",
-            text: message,
+            text: message + longMessage,
         };
 
         await new Promise((resolve, reject) => {
