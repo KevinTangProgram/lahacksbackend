@@ -3,8 +3,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cohere = require('cohere-ai');
 const crypto = require('crypto-js');
+const nodemailer = require('nodemailer');
 cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
-connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority"
+connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
+
+const transporter = nodemailer.createTransport( {
+    service: "Zoho",
+    auth: {
+        user: "awesomeaacommands@gmail.com",
+        pass: "@h+%97WNVu5zVwZ"
+    }
+});
 
 const connectDB = async () => {
     mongoose.set('strictQuery', false);
@@ -78,7 +87,7 @@ app.put('/api/cohere', async (req, res) => {
     message = message.substring(0, message.length - 1);
 
     const response = await cohere.generate({
-        model: '0239f7b4-4538-494d-ba18-1e5171774ca8-ft',
+        model: '0986e558-3929-4dae-a381-7d1aa3625f91-ft',
         prompt: message,
         max_tokens: 500,
         temperature: 0.5,
@@ -116,4 +125,49 @@ app.put('/delete', async (req, res) => {
         post.save();
     }
     res.json("Successful Deletion");
+})
+
+app.get('/email', async (req, res) => {
+    if (req.query.id !== "")
+    {
+        const feed = await User.findById(req.query.id);
+        const message = "Hello,\n\n" + "Below are the documents that you requested.\n\nSincerely, AFK\n\n";
+        const longMessage = "";
+        for (let i = 0; i < feed.messages.length; i++)
+        {
+            if (i % 2 === 0)
+            {
+                longMessage += "Prompt:\n";
+                for (let j = 0; j < feed.messages[i].length; j++)
+                {
+                    longMessage += feed.messages[i][j] + ' ';
+                }
+                longMessage += "\n\n";
+            }
+            else
+            {
+                longMessage += "Response:\n" + feed.messages[i] + "\n\n";
+            }
+        }
+        const options = {
+            from: "ideaoasis@zohomail.com",
+            to: req.body.name,
+            subject: "Idea Oasis - Data",
+            text: message,
+        };
+
+        await new Promise((resolve, reject) => {
+            transporter.sendMail(options, function (err, info){
+                if (err)
+                {
+                    reject(err);
+                }
+                else
+                {
+                    resolve("email sent");
+                }
+            });
+        })
+    }
+    res.json(0);
 })
