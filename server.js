@@ -63,9 +63,14 @@ app.post('/new/account', async (req, res) => {
 app.put('/api/cohere', async (req, res) => {
   // Call the cohere.generate function
 
-    const feed = await User.findById(req.body.id);
-    
-    let message = "";
+    const feed = "";
+    if (req.body.id !== "")
+    {
+        feed = await User.findById(req.body.id);
+    }
+
+    let message = "Please organize the following ideas into a coherent notes document IN HTML." + 
+    " Add words to make complete sentences, and generate some headings where necessary. Use the outline style of note taking:\n";
     for (let i = 0; i < req.body.input.length; i++)
     {
         message += req.body.input[i] + ' ';
@@ -73,23 +78,26 @@ app.put('/api/cohere', async (req, res) => {
     message = message.substring(0, message.length - 1);
 
     const response = await cohere.generate({
-        model: 'command-xlarge-nightly',
+        model: '0239f7b4-4538-494d-ba18-1e5171774ca8-ft',
         prompt: message,
-        max_tokens: 300,
-        temperature: 1,
+        max_tokens: 500,
+        temperature: 0.5,
         k: 0,
         stop_sequences: [],
         return_likelihoods: 'NONE'
     });
     // Send the response back to the client
 
-    let updatedMessages = feed.messages;
-    updatedMessages.push(req.body.input);
-    updatedMessages.push(response.body.generations[0].text);
-    const post = await User.findByIdAndUpdate(req.body.id, {
-        messages: updatedMessages,
-    }, { new: true });
-    post.save();
+    if (req.body.id !== "")
+    {
+        let updatedMessages = feed.messages;
+        updatedMessages.push(req.body.input);
+        updatedMessages.push(response.body.generations[0].text);
+        const post = await User.findByIdAndUpdate(req.body.id, {
+            messages: updatedMessages,
+        }, { new: true });
+        post.save();
+    }
 
     res.send(response.body.generations[0].text);
 });
