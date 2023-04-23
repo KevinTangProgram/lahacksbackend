@@ -101,3 +101,19 @@ app.put('/api/cohere', async (req, res) => {
 
     res.send(response.body.generations[0].text);
 });
+
+app.put('/delete', async (req, res) => {
+    let feed = "";
+    if (req.body.id !== "")
+    {
+        feed = await User.findById(req.body.id);
+        let newMessages = feed.messages;
+        newMessages.splice(req.body.index, 2);
+
+        const post = await User.findByIdAndUpdate(req.body.id, {
+            messages: newMessages,
+        }, { new: true });
+        post.save();
+    }
+    res.json("Successful Deletion");
+})
