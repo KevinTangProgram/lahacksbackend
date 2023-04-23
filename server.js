@@ -69,8 +69,8 @@ app.put('/api/cohere', async (req, res) => {
         feed = await User.findById(req.body.id);
     }
 
-    let message = "Please organize the following ideas into a coherent notes document IN HTML." + 
-    " Add words to make complete sentences, and generate some headings where necessary. Use the outline style of note taking:\n";
+    let message = "Please organize the following ideas into a coherent notes document with complete sentences." + 
+    " Format the document as headers separated by whitespace with dashes to represent bullet points: \n";
     for (let i = 0; i < req.body.input.length; i++)
     {
         message += req.body.input[i] + ' ';
@@ -78,7 +78,7 @@ app.put('/api/cohere', async (req, res) => {
     message = message.substring(0, message.length - 1);
 
     const response = await cohere.generate({
-        model: '0239f7b4-4538-494d-ba18-1e5171774ca8-ft',
+        model: '0986e558-3929-4dae-a381-7d1aa3625f91-ft',
         prompt: message,
         max_tokens: 500,
         temperature: 0.5,
