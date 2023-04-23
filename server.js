@@ -109,8 +109,14 @@ app.put('/api/cohere', async (req, res) => {
         }, { new: true });
         post.save();
     }
+    const text = response.body.generations[0].text;
 
-    res.send(response.body.generations[0].text);
+    const sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
+
+    const header = sentences[0];
+    const headerReal = `<h1>${header}</h1>`;
+    const bulletPoints = sentences.slice(1).map(sentence => ` - ${sentence}\n`);
+    res.send(headerReal + bulletPoints);
 });
 
 app.put('/delete', async (req, res) => {
