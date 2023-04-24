@@ -10,7 +10,7 @@ connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
     organization: "org-ESStGPBE9uVjNsLVsV1L7drZ",
-    apiKey: "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",
+    apiKey: "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",
 });
 
 const transporter = nodemailer.createTransport( {
@@ -77,90 +77,36 @@ app.post('/new/account', async (req, res) => {
 // Define your API endpoints here
 app.put('/api/cohere', async (req, res) => {
   // Call the cohere.generate function
-
+    let feed = "";
+    if (req.body.id !== "")
+    {
+        feed = await User.findById(req.body.id);
+    }
+    //  let message = "Please organize the following ideas into a coherent notes document with complete sentences." + 
+    //  " Format the document as headers separated by whitespace with dashes to represent bullet points: \n";
+    let message = "";
+    for (let i = 0; i < req.body.input.length; i++)
+    {
+        message += req.body.input[i] + ' ';
+    }
+    message = message.substring(0, message.length - 1);
     const openai = new OpenAIApi(configuration);
-    const response = await openai.createEdit({
-    model: "text-davinci-edit-001",
-    input: "1/11/23:\n At acid pKa, 1:1 HA/A-.\nAt 1 pH lower (1 order of magtude more H+), 10:1 HA/A-.\nAt 1 pH higher (1 order of magnitude less H+), 1:10 HA/A-.\nHenderson Hasselback: pH=pKa+log(A-/HA)\n\n1/13/23:\npI: average the two pKas around the neutral range (when molecule is zwitterion)\nIf you are at carboxy pKa, its actually closer to 0.5 net charge (not all of the molecules have COO-, but they definitely have NH3+).\nIf you are at amino pKa, its actually closer to -0.5 net charge (all molecules have COO-, but not all have NH3+).\nAs pH range decreases, you have more positive charge.\n",
-    instruction: "Organize this into bullet point notes",
+    const completion = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo",
+    messages: [{role: "user", content: message}],
     });
-    console.log(response.data.choices);
-    res.json(0);
-//   const openai = new OpenAIApi(configuration);
-//   const response = await openai.createEdit({
-//   model: "text-ada-001",
-//   input: "1/11/23:\n At acid pKa, 1:1 HA/A-.\nAt 1 pH lower (1 order of magnitude more H+), 10:1 HA/A-.\nAt 1 pH higher (1 order of magnitude less H+), 1:10 HA/A-.\nHenderson Hasselback: pH=pKa+log(A-/HA)\n\n1/13/23:\npI: average the two pKas around the neutral range (when molecule is zwitterion)\nIf you are at carboxy pKa, its actually closer to 0.5 net charge (not all of the molecules have COO-, but they definitely have NH3+).\nIf you are at amino pKa, its actually closer to -0.5 net charge (all molecules have COO-, but not all have NH3+).\nAs pH range decreases, you have more positive charge.\n",
-//   instruction: "Please organize the following ideas into a coherent notes document with complete sentences." + 
-//   " Format the document as headers separated by whitespace with dashes to represent bullet points:"
-//   });
-    // let feed = "";
-    // if (req.body.id !== "")
-    // {
-    //     feed = await User.findById(req.body.id);
-    // }
-
-<<<<<<< HEAD
-    // let message = "Please organize the following ideas into a coherent notes document with complete sentences." + 
-    // " Format the document as headers separated by whitespace with dashes to represent bullet points: \n";
-    // for (let i = 0; i < req.body.input.length; i++)
-    // {
-    //     let input = req.body.input[i];
-    //     input = input.replace(/<br>/g, '\n');
-    //     message += input + ' ';
-    // }
-    // message = message.substring(0, message.length - 1);
-
-    // const response = await cohere.generate({
-    //     model: '0986e558-3929-4dae-a381-7d1aa3625f91-ft',
-    //     prompt: message,
-    //     max_tokens: 500,
-    //     temperature: 0.5,
-    //     k: 0,
-    //     stop_sequences: [],
-    //     return_likelihoods: 'NONE'
-    // });
-    // // Send the response back to the client
-
-    // if (req.body.id !== "")
-    // {
-    //     let updatedMessages = feed.messages;
-    //     updatedMessages.push(req.body.input);
-    //     updatedMessages.push(response.body.generations[0].text);
-    //     const post = await User.findByIdAndUpdate(req.body.id, {
-    //         messages: updatedMessages,
-    //     }, { new: true });
-    //     post.save();
-    // }
-    // const text = response.body.generations[0].text;
-
-    // const sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
-
-    // const header = sentences[0];
-    // const headerReal = `<h1>${header}</h1>`;
-    // const bulletPoints = sentences.slice(1).map(sentence => ` - ${sentence}\n`);
-    // res.send(headerReal + bulletPoints);
-=======
+    message = completion.data.choices[0].message.content;
     if (req.body.id !== "")
     {
         let updatedMessages = feed.messages;
         updatedMessages.push(req.body.input);
-        updatedMessages.push(response.body.generations[0].text);
+        updatedMessages.push(message);
         const post = await User.findByIdAndUpdate(req.body.id, {
             messages: updatedMessages,
         }, { new: true });
         post.save();
     }
-    const text = response.body.generations[0].text;
-    res.send(text);
-
-// const sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
-
-// const header = sentences[0];
-// const headerReal = `<h1>${header}</h1>`;
-// const bulletPoints = sentences.slice(1).map(sentence => ` - ${sentence}<br>`);
-// res.send(headerReal + bulletPoints.join(''));
-
->>>>>>> 2a9272a58c37dbc3989d6c085584e51eeee7b281
+    res.json(completion.data.choices[0].message.content);
 });
 
 app.put('/delete', async (req, res) => {
