@@ -99,6 +99,7 @@ app.put('/api/cohere', async (req, res) => {
     //     feed = await User.findById(req.body.id);
     // }
 
+<<<<<<< HEAD
     // let message = "Please organize the following ideas into a coherent notes document with complete sentences." + 
     // " Format the document as headers separated by whitespace with dashes to represent bullet points: \n";
     // for (let i = 0; i < req.body.input.length; i++)
@@ -138,6 +139,28 @@ app.put('/api/cohere', async (req, res) => {
     // const headerReal = `<h1>${header}</h1>`;
     // const bulletPoints = sentences.slice(1).map(sentence => ` - ${sentence}\n`);
     // res.send(headerReal + bulletPoints);
+=======
+    if (req.body.id !== "")
+    {
+        let updatedMessages = feed.messages;
+        updatedMessages.push(req.body.input);
+        updatedMessages.push(response.body.generations[0].text);
+        const post = await User.findByIdAndUpdate(req.body.id, {
+            messages: updatedMessages,
+        }, { new: true });
+        post.save();
+    }
+    const text = response.body.generations[0].text;
+    res.send(text);
+
+// const sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
+
+// const header = sentences[0];
+// const headerReal = `<h1>${header}</h1>`;
+// const bulletPoints = sentences.slice(1).map(sentence => ` - ${sentence}<br>`);
+// res.send(headerReal + bulletPoints.join(''));
+
+>>>>>>> 2a9272a58c37dbc3989d6c085584e51eeee7b281
 });
 
 app.put('/delete', async (req, res) => {
