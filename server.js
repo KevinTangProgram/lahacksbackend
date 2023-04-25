@@ -4,13 +4,15 @@ const cors = require('cors');
 const cohere = require('cohere-ai');
 const crypto = require('crypto-js');
 const nodemailer = require('nodemailer');
+const Dotenv = require("dotenv").config();
 cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
 connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
 //
+
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
     organization: "org-ESStGPBE9uVjNsLVsV1L7drZ",
-    apiKey: "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",
+    apiKey: process.env.API_KEY,
 });
 
 const transporter = nodemailer.createTransport( {

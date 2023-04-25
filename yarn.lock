@@ -69,6 +69,7 @@ __metadata:
     cohere-ai: ^6.2.0
     cors: ^2.8.5
     crypto-js: ^4.1.1
+    dotenv-webpack: ^2.0.0
     express: ^4.18.2
     mongoose: ^7.0.4
     nodemailer: ^6.9.1
@@ -222,6 +223,33 @@ __metadata:
   version: 1.2.0
   resolution: "destroy@npm:1.2.0"
   checksum: 0acb300b7478a08b92d810ab229d5afe0d2f4399272045ab22affa0d99dbaf12637659411530a6fcd597a9bdac718fc94373a61a95b4651bbc7b83684a565e38
+  languageName: node
+  linkType: hard
+
+"dotenv-defaults@npm:^2.0.0":
+  version: 2.0.2
+  resolution: "dotenv-defaults@npm:2.0.2"
+  dependencies:
+    dotenv: ^8.2.0
+  checksum: c005960bd048e2189c4799e729c41f362e415e6e0b54313d3f31e853a84b049bf770b25cb21c112c2805bb13a8376edc9de451fb514abf8546392d327c27f6e5
+  languageName: node
+  linkType: hard
+
+"dotenv-webpack@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "dotenv-webpack@npm:2.0.0"
+  dependencies:
+    dotenv-defaults: ^2.0.0
+  peerDependencies:
+    webpack: ^1 || ^2 || ^3 || ^4
+  checksum: 61a6edcce357ee2360f816a3db23e1c224240dc50b0edde345a4a7d1d4080c67b0e600e134650a396ea892275f3e52362bfb7f080b8e52732de8059a226744c0
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^8.2.0":
+  version: 8.6.0
+  resolution: "dotenv@npm:8.6.0"
+  checksum: 38e902c80b0666ab59e9310a3d24ed237029a7ce34d976796349765ac96b8d769f6df19090f1f471b77a25ca391971efde8a1ea63bb83111bd8bec8e5cc9b2cd
   languageName: node
   linkType: hard
 
