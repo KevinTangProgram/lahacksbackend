@@ -69,6 +69,7 @@ __metadata:
     cohere-ai: ^6.2.0
     cors: ^2.8.5
     crypto-js: ^4.1.1
+    dotenv: ^16.0.3
     dotenv-webpack: ^2.0.0
     express: ^4.18.2
     mongoose: ^7.0.4
@@ -243,6 +244,13 @@ __metadata:
   peerDependencies:
     webpack: ^1 || ^2 || ^3 || ^4
   checksum: 61a6edcce357ee2360f816a3db23e1c224240dc50b0edde345a4a7d1d4080c67b0e600e134650a396ea892275f3e52362bfb7f080b8e52732de8059a226744c0
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.0.3":
+  version: 16.0.3
+  resolution: "dotenv@npm:16.0.3"
+  checksum: afcf03f373d7a6d62c7e9afea6328e62851d627a4e73f2e12d0a8deae1cd375892004f3021883f8aec85932cd2834b091f568ced92b4774625b321db83b827f8
   languageName: node
   linkType: hard
 

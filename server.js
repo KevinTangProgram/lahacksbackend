@@ -4,7 +4,7 @@ const cors = require('cors');
 const cohere = require('cohere-ai');
 const crypto = require('crypto-js');
 const nodemailer = require('nodemailer');
-//const Dotenv = require("dotenv").config();
+const Dotenv = require("dotenv").config();
 cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
 connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
 //
@@ -93,11 +93,18 @@ app.put('/api/cohere', async (req, res) => {
     }
     message = message.substring(0, message.length - 1);
     const openai = new OpenAIApi(configuration);
-    const completion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
-    messages: [{role: "user", content: message}],
+    const response = await openai.createCompletion({
+    model: "text-davinci-003",
+    prompt: message,
+    max_tokens: 7,
+    temperature: 0,
     });
-    message = completion.data.choices[0].message.content;
+    // const openai = new OpenAIApi(configuration);
+    // const completion = await openai.createChatCompletion({
+    // model: "gpt-3.5-turbo",
+    // messages: [{role: "user", content: message}],
+    // });
+    // message = completion.data.choices[0].message.content;
     if (req.body.id !== "")
     {
         let updatedMessages = feed.messages;
@@ -108,7 +115,8 @@ app.put('/api/cohere', async (req, res) => {
         }, { new: true });
         post.save();
     }
-    res.json(completion.data.choices[0].message.content);
+    res.json(response.data.choices[0].text);
+    // res.json(completion.data.choices[0].message.content);
 });
 
 app.put('/delete', async (req, res) => {
