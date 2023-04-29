@@ -6,7 +6,7 @@ const crypto = require('crypto-js');
 const nodemailer = require('nodemailer');
 const Dotenv = require("dotenv").config();
 cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
-connection = "mongodb+srv://aaronkwan:Zekemongodb128@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
+connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
 //
 
 const { Configuration, OpenAIApi } = require("openai");
@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport( {
     service: "Zoho",
     auth: {
         user: "awesomeaacommands@gmail.com",
-        pass: "@h+%97WNVu5zVwZ"
+        pass: process.env.ZOHO_PASSWORD
     }
 });
 
