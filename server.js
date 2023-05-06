@@ -12,7 +12,7 @@ connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullsta
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
     organization: "org-ESStGPBE9uVjNsLVsV1L7drZ",
-    apiKey: process.env.API_KEY,
+    apiKey: process.env.API_KEY,    //DO NOT PASTE THE KEY HERE
 });
 
 const transporter = nodemailer.createTransport( {
@@ -45,6 +45,7 @@ connectDB().then(() => {
 })
 
 const User = require("./models/user");
+const Group = require("./models/group");
 
 app.get('/auth', async (req, res) => {
     let returnArray = ["", []]
@@ -177,5 +178,29 @@ app.get('/email', async (req, res) => {
             });
         })
     }
+    res.json(0);
+})
+
+app.get('/listen', async (req, res) => {
+    const currentTime = Date.now();
+    while (Date.now() - currentTime < 60000)
+    {
+        const groupMessages = await Group.findById(req.query.groupId);
+        if (groupMessages.update > req.query.lastUpdate)
+        {
+            res.json(groupMessages);
+            return;
+        }
+    }
+    res.json(0);
+})
+
+app.put('/group/update', async (req, res) => {
+    let newObject = {name: req.body.name, message: req.body.message, timestamp: Date.now()};
+    let groupMessages = await Group.findByIdAndUpdate(req.body.groupId, {
+        rawNotes: rawNotes.push(newObject),
+        update: Date.now(),
+    }, {new: true});
+    groupMessages.save();
     res.json(0);
 })
