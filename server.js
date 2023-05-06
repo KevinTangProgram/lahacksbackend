@@ -204,3 +204,13 @@ app.put('/group/update', async (req, res) => {
     groupMessages.save();
     res.json(0);
 })
+
+app.put('/individial/update', async (req, res) => {
+    let newObject = {name: req.body.name, message: req.body.message, timestamp: Date.now()};
+    let individualMessages = await User.findByIdAndUpdate(req.body.userId, {
+        rawNotes: rawNotes.push(newObject),
+        update: Date.now(),
+    }, {new: true});
+    individualMessages.save();
+    res.json(0);
+})
