@@ -14,7 +14,7 @@ const UserSchema = new Schema ({
         type: String,
         required: true
     },
-    messages: {
+    oasis: {
         type: Array,
         default: []
     }
