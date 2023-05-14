@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const OasisSchema = new Schema ({
-    title: {
-        type: String,
+    info: {
+        type: Array,
         required: true
     },
     topic: {
