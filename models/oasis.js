@@ -6,27 +6,19 @@ const OasisSchema = new Schema ({
         type: Array,
         required: true
     },
-    topic: {
-        type: String,
+    settings: {
+        type: Array,
         required: true
     },
-    options: {
-        type: String,
-        default: "format"
-    },
-    lastUpdate: {
-        type: Number,
-        default: 0
+    stats: {
+        type: Array,
+        required: true
     },
     users: {
         type: Array,
         default: []
     },
-    rawMessages: {
-        type: Array,
-        default: []
-    },
-    processedMessages: {
+    content: {
         type: Array,
         default: []
     }
