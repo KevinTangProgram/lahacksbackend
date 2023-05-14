@@ -45,7 +45,7 @@ connectDB().then(() => {
 })
 
 const User = require("./models/user");
-const Group = require("./models/group");
+//const Group = require("./models/group");
 
 app.get('/auth', async (req, res) => {
     let returnArray = ["", []]
