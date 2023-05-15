@@ -45,7 +45,7 @@ const OasisSchema = new Schema ({
                     },
                     mode: {
                         type: Number,
-                        default: 0
+                        default: 1
                     },
                     generateHeaders: {
                         type: Boolean,
@@ -100,15 +100,15 @@ const OasisSchema = new Schema ({
                         default: "active"
                     },
                     createDate: {
-                        type: Date,
+                        type: Number,
                         default: Date.now()
                     },
                     lastEditDate: {
-                        type: Date,
+                        type: Number,
                         default: Date.now()
                     },
                     archiveDate: {
-                        type: Date,
+                        type: Number,
                         default: null
                     },
                 }
@@ -119,7 +119,8 @@ const OasisSchema = new Schema ({
         type: Object,
         default: {
             owner: {
-                type: Number,
+                type: Schema.Types.ObjectId,
+                // COME BACK
                 required: true
             },
             

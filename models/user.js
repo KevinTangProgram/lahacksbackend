@@ -63,11 +63,11 @@ const UserSchema = new Schema ({
                 default: 0
             },
             joinDate: {
-                type: Date,
+                type: Number,
                 default: Date.now()
             },
             lastLogin: {
-                type: Date,
+                type: Number,
                 default: Date.now()
             },
             loginAmount: {
