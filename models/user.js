@@ -3,20 +3,96 @@ const Schema = mongoose.Schema;
 
 const UserSchema = new Schema ({
     info: {
-        type: Array,
-        required: true
+        type: Object,
+        required: true,
+        default: {
+            name: {
+                type: String,
+                required: true
+            },
+            password: {
+                type: String,
+                required: true
+            },
+            email: {
+                type: String,
+                default: ""
+            }
+        }
     },
     settings: {
         type: Object,
-        required: true
+        required: true,
+        default: {
+            theme: {
+                type: String,
+                default: "light"
+            },
+            notification: {
+                type: String,
+                default: ""
+            },
+            oasisSort: {
+                type: String,
+                default: "recent"
+            },
+            privacy: {
+                type: String,
+                default: ""
+            },
+            misc: {
+                type: Array,
+                default: []
+            }
+        }
     },
     stats: {
-        type: Array,
-        required: true
+        type: Object,
+        required: true,
+        default: {
+            oasisCreated: {
+                type: Number,
+                default: 0
+            },
+            oasisDeleted: {
+                type: Number,
+                default: 0
+            },
+            messagesSent: {
+                type: Number,
+                default: 0
+            },
+            joinDate: {
+                type: Date,
+                default: Date.now()
+            },
+            lastLogin: {
+                type: Date,
+                default: Date.now()
+            },
+            loginAmount: {
+                type: Number,
+                default: 0
+            }
+        }
     },
     oasis: {
-        type: Array,
-        default: []
+        type: Object,
+        required: true,
+        default: {
+            ownOases: {
+                type: Array,
+                default: []
+            },
+            joinedOases: {
+                type: Array,
+                default: []
+            },
+            archivedOases: {
+                type: Array,
+                default: []
+            }
+        }
     }
 });
 
