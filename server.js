@@ -73,9 +73,6 @@ app.post('/new/account', async (req, res) => {
             password: crypto.SHA256(req.body.password).toString(),
             email: req.body.email,
         },   
-        settings: {
-            theme: "dark",
-        }     
     })
     post.save();
     res.json(0);
