@@ -68,8 +68,15 @@ app.get('/auth', async (req, res) => {
 
 app.post('/new/account', async (req, res) => {
     const post = new User ({
-        name: req.body.user,
-        password: crypto.SHA256(req.body.pass).toString(),
+        info: {
+            name: req.body.user,
+            password: crypto.SHA256(req.body.password).toString(),
+            email: req.body.email,
+        },
+        settings: {
+            theme: "dark",
+        }
+        
     })
     post.save();
     res.json(0);
