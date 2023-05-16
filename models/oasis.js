@@ -76,11 +76,13 @@ const OStateSchema = new Schema({
 const OStatsSchema = new Schema({
     size: {
         type: OSizeSchema,
-        required: true
+        required: true,
+        default: {}
     },
     state: {
         type: OStateSchema,
-        required: true
+        required: true,
+        default: {}
     }
 }, { _id: false })
 const OUsersSchema = new Schema({
@@ -156,22 +158,27 @@ const OasisSchema = new Schema ({
     info: {
         type: OInfoSchema,
         required: true,
+        default: {}
     },
     settings: {
         type: OSettingsSchema,
-        required: true
+        required: true,
+        default: {}
     },
     stats: {
         type: OStatsSchema,
         required: true,
+        default: {}
     },
     users: {
         type: OUsersSchema,
         required: true,
+        default: {}
     },
     content: {
         type: OContentSchema,
-        required: true
+        required: true,
+        default: {}
     }
 });
 const Oasis = mongoose.model("Oasis", OasisSchema);
