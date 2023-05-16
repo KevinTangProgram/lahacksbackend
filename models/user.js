@@ -22,7 +22,7 @@ const USettingsSchema = new Schema ({
     },
     notification: {
         type: String,
-        default: ""
+        default: null
     },
     oasisSort: {
         type: String,
@@ -30,7 +30,7 @@ const USettingsSchema = new Schema ({
     },
     privacy: {
         type: String,
-        default: ""
+        default: null
     },
     misc: {
         type: Array,
@@ -83,18 +83,22 @@ const UserSchema = new Schema ({
     info: {
         type: UInfoSchema,
         required: true,
+        default: {}
     },
     settings: {
         type: USettingsSchema,
         required: true,
+        default: {}
     },
     stats: {
         type: UStatsSchema,
         required: true,
+        default: {}
     },
     oasis: {
         type: UOasisSchema,
         required: true,
+        default: {}
     }
 });
 const User = mongoose.model("User", UserSchema);
