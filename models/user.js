@@ -77,6 +77,8 @@ const UOasisSchema = new Schema({
         default: []
     }
 }, { _id: false })
+
+// USER:
 const UserSchema = new Schema ({
     info: {
         type: UInfoSchema,
@@ -95,7 +97,5 @@ const UserSchema = new Schema ({
         required: true,
     }
 });
-
 const User = mongoose.model("User", UserSchema);
-
 module.exports = User;
