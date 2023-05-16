@@ -24,74 +24,32 @@ const UserSchema = new Schema ({
         type: Object,
         required: true,
         default: {
-            theme: {
-                type: String,
-                default: "light"
-            },
-            notification: {
-                type: String,
-                default: ""
-            },
-            oasisSort: {
-                type: String,
-                default: "recent"
-            },
-            privacy: {
-                type: String,
-                default: ""
-            },
-            misc: {
-                type: Array,
-                default: []
-            }
+            theme: "light",
+            notification: "",
+            oasisSort: "recent",
+            privacy: "",
+            misc: [],
         }
     },
     stats: {
         type: Object,
         required: true,
         default: {
-            oasisCreated: {
-                type: Number,
-                default: 0
-            },
-            oasisDeleted: {
-                type: Number,
-                default: 0
-            },
-            messagesSent: {
-                type: Number,
-                default: 0
-            },
-            joinDate: {
-                type: Number,
-                default: Date.now()
-            },
-            lastLogin: {
-                type: Number,
-                default: Date.now()
-            },
-            loginAmount: {
-                type: Number,
-                default: 0
-            }
+            oasisCreated: 0,
+            oasisDeleted: 0,
+            messagesSent: 0,
+            joinDate: Date.now(),
+            lastLogin: Date.now(),
+            loginAmount: 0,
         }
     },
     oasis: {
         type: Object,
         required: true,
         default: {
-            ownOases: {
-                type: Array,
-                default: []
-            },
-            joinedOases: {
-                type: Array,
-                default: []
-            },
-            archivedOases: {
-                type: Array,
-                default: []
-            }
+            ownOases: [],
+            joinedOases: [],
+            archivedOases: [],
         }
     }
 });
