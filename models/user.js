@@ -84,18 +84,18 @@ const UserSchema = new Schema ({
         type: UInfoSchema,
         required: true,
     },
-    settings: {
-        type: USettingsSchema,
-        required: true,
-    },
+    // settings: {
+    //     type: USettingsSchema,
+    //     required: true,
+    // },
     stats: {
         type: UStatsSchema,
         required: true,
     },
-    oasis: {
-        type: UOasisSchema,
-        required: true,
-    }
+    // oasis: {
+    //     type: UOasisSchema,
+    //     required: true,
+    // }
 });
 const User = mongoose.model("User", UserSchema);
 module.exports = User;
