@@ -1,71 +1,46 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const OInfoSchema = new Schema ({
+    default: {
+        title: {
+            type: String,
+            required: true
+        },
+        description: {
+            type: String,
+            required: true
+        },
+        misc: {
+            type: Array,
+            default: []
+        }
+    }
+})
+const OSettingsSchema = new Schema ({
+    default: {
+        generationOptions: {
+            generateRecent: true,
+            startIndex: 0,
+            endIndex: 0,
+            topic: null,
+            mode: 1,
+            generateHeaders: false,
+            useBulletFormat: false
+        },
+        sharing: "private",
+        misc: []
+    }
+})
+
 const OasisSchema = new Schema ({
     info: {
-        type: Object,
+        type: OInfoSchema,
         required: true,
-        default: {
-            title: {
-                type: String,
-                required: true
-            },
-            description: {
-                type: String,
-                required: true
-            },
-            misc: {
-                type: Array,
-                default: []
-            }
-        }
     },
     settings: {
-        type: Object,
-        required: true,
-        default: {
-            generationOptions: {
-                type: Object,
-                default: {
-                    generateRecent: {
-                        type: Boolean,
-                        default: true
-                    },
-                    startIndex: {
-                        type: Number,
-                        default: 0
-                    },
-                    endIndex: {
-                        type: Number,
-                        default: 0
-                    },
-                    topic: {
-                        type: String,
-                        default: null
-                    },
-                    mode: {
-                        type: Number,
-                        default: 1
-                    },
-                    generateHeaders: {
-                        type: Boolean,
-                        default: false
-                    },
-                    useBulletFormat: {
-                        type: Boolean,
-                        default: false
-                    }
-                }
-            },
-            sharing: {
-                type: String,
-                default: "private"
-            },
-            misc: {
-                type: Array,
-                default: []
-            }
-        }
+        type: OSettingsSchema,
+        required: true
     },
     stats: {
         type: Object,
