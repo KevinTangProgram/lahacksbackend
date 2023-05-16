@@ -1,56 +1,98 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const UInfoSchema = new Schema ({
+    name: {
+        type: String,
+        required: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+        default: ""
+    }
+}, { _id: false })
+const USettingsSchema = new Schema ({
+    theme: {
+        type: String,
+        default: "light"
+    },
+    notification: {
+        type: String,
+        default: ""
+    },
+    oasisSort: {
+        type: String,
+        default: "recent"
+    },
+    privacy: {
+        type: String,
+        default: ""
+    },
+    misc: {
+        type: Array,
+        default: []
+    }
+}, { _id: false })
+const UStatsSchema = new Schema ({
+    oasisCreated: {
+        type: Number,
+        default: 0
+    },
+    oasisDeleted: {
+        type: Number,
+        default: 0
+    },
+    messagesSent: {
+        type: Number,
+        default: 0
+    },
+    joinDate: {
+        type: Number,
+        default: Date.now()
+    },
+    lastLogin: {
+        type: Number,
+        default: Date.now()
+    },
+    loginAmount: {
+        type: Number,
+        default: 0
+    }
+}, { _id: false })
+const UOasisSchema = new Schema({
+    ownOases: {
+        type: Array,
+        default: []
+    },
+    joinedOases: {
+        type: Array,
+        default: []
+    },
+    archivedOases: {
+        type: Array,
+        default: []
+    }
+}, { _id: false })
 const UserSchema = new Schema ({
     info: {
-        type: Object,
+        type: UInfoSchema,
         required: true,
-        default: {
-            name: {
-                type: String,
-                required: true
-            },
-            password: {
-                type: String,
-                required: true
-            },
-            email: {
-                type: String,
-                default: ""
-            }
-        }
     },
     settings: {
-        type: Object,
+        type: USettingsSchema,
         required: true,
-        default: {
-            theme: "light",
-            notification: "",
-            oasisSort: "recent",
-            privacy: "",
-            misc: [],
-        }
     },
     stats: {
-        type: Object,
+        type: UStatsSchema,
         required: true,
-        default: {
-            oasisCreated: 0,
-            oasisDeleted: 0,
-            messagesSent: 0,
-            joinDate: Date.now(),
-            lastLogin: Date.now(),
-            loginAmount: 0,
-        }
     },
     oasis: {
-        type: Object,
+        type: UOasisSchema,
         required: true,
-        default: {
-            ownOases: [],
-            joinedOases: [],
-            archivedOases: [],
-        }
     }
 });
 

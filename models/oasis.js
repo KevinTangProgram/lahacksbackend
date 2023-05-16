@@ -1,25 +1,28 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+
+// const UOasisSchema = new Schema({
+
+// }, { _id: false })
 const OInfoSchema = new Schema ({
-    default: {
-        title: {
-            type: String,
-            required: true
-        },
-        description: {
-            type: String,
-            required: true
-        },
-        misc: {
-            type: Array,
-            default: []
-        }
+    title: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    misc: {
+        type: Array,
+        default: []
     }
 })
 const OSettingsSchema = new Schema ({
-    default: {
-        generationOptions: {
+    generationOptions: {
+        type: Object,
+        default: {
             generateRecent: true,
             startIndex: 0,
             endIndex: 0,
@@ -27,9 +30,15 @@ const OSettingsSchema = new Schema ({
             mode: 1,
             generateHeaders: false,
             useBulletFormat: false
-        },
-        sharing: "private",
-        misc: []
+        }
+    },
+    sharing: {
+        type: String,
+        default: "private"
+    },
+    misc: {
+        type: Array,
+        default: []
     }
 })
 
