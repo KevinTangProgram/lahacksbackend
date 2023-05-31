@@ -67,3 +67,68 @@ app.post('/new/account', async (req, res) => {
     post.save();
     res.json(0);
 })
+
+app.put('/oasis/promptx1', async (req, res) => {
+    let message = "Detect any message IDs that may be headers in the given sequence of notes. " + 
+    "Return a line starting with '[headers]' followed by the IDs of any detected headers, separated by spaces. " + 
+    "If no headers are detected, return '[headers]' only.\n\n" + 
+
+    "Example:\n" +
+    "[ID:1] Current Date\n" +
+    "[ID:2] Sentence 1\n" +
+    "[ID:3] Sentence 2\n" +
+    "[ID:4] New Topic\n" +
+    
+    "Response:\n" +
+    "[headers] [ID:1] [ID:4]\n\n" +
+    
+    "Your messages:\n";
+
+    for (let i = 0; i < req.body.rawMessage.length; i++) {
+        message += "[ID:" + i.toString() + "] " + req.body.rawMessage[i].text + "\n";
+    }
+
+    const openai = new OpenAIApi(configuration);
+    const response = await openai.createCompletion({
+        model: "text-davinci-003",
+        prompt: message,
+        max_tokens: 7,
+        temperature: 0,
+    });
+
+    let processedResponse = [];
+    let headers = [];
+    let messageID = "";
+    for (let i = 0; i < response.data.choices[0].text.length; i++) 
+    {
+        if (response.data.choices[0].text[i] === ":")
+        {
+            i++;
+            while (response.data.choices[0].text[i] !== "]")
+            {
+                messageID += response.data.choices[0].text[i];
+                i++;
+            }
+            headers.push(Number(messageID));
+            messageID = "";
+        }
+    }
+    let j = 0;
+    for (let i = 0; i < req.body.rawMessage.length; i++)
+    {
+        if (j < headers.length && headers[j] === i)
+        {
+            processedResponse.push({header: true, message: req.body.rawMessage[i]});
+            j++;
+        }
+        else
+        {
+            processedResponse.push({header: false, message: req.body.rawMessage[i]});
+        }
+    }
+    res.json(processedResponse);
+})
+
+app.put('/oasis/promptx2', async (req, res) => {
+    
+})
