@@ -130,5 +130,35 @@ app.put('/oasis/promptx1', async (req, res) => {
 })
 
 app.put('/oasis/promptx2', async (req, res) => {
+    let message = "You are given a portion of a '" + req.body.header + "' notes document with messages attached to ID numbers. " +
+    "First, read through the messages, generating headers to group similar messages. " +
+    "If an existing message is similar to your header, mark that message as a header by adding an 'H' to its ID. " +
+    "However, if that message includes any extra details, do not remove the message, just insert your header above it. " +
+    "Finally, rephrase each individual message as a complete sentence.\n\n" +
+
+    "Return ONLY one string with all rephrased messages and headers. " + 
+    'Remember that original messages marked as headers have IDs of the form "[ID:1H]", ' +
+    'newly inserted headers have IDs of the form "[ID:header]", ' +
+    "and all other messages have the same IDs as before.\n\n" +
     
+    "Example Response:\n" +
+    "[ID:1H] Existing header\n" +
+    "[ID:2] Rephrased sentence 1\n" +
+    "[ID:3] Rephrased sentence 2\n" +
+    "[ID:header] Generated header\n" +
+    "[ID:4] Rephrased sentence 3\n\n" +
+    
+    "Your Messages:\n";
+    
+    for (let i = 0; i < req.body.rawMessage.length; i++) {
+        message += "[ID:" + i.toString() + "] " + req.body.rawMessage[i].text + "\n";
+    }
+
+    const openai = new OpenAIApi(configuration);
+    const response = await openai.createCompletion({
+        model: "text-davinci-003",
+        prompt: message,
+        max_tokens: 7,
+        temperature: 0,
+    });
 })
