@@ -11,7 +11,7 @@ connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullsta
 
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
-    organization: "org-ESStGPBE9uVjNsLVsV1L7drZ",
+    organization: "org-UhyAID0yj3ueKOp8ZQWMQnxW",
     apiKey: process.env.API_KEY,    //DO NOT PASTE THE KEY HERE
 });
 
@@ -84,15 +84,16 @@ app.put('/oasis/promptx1', async (req, res) => {
     
     "Your messages:\n";
 
-    for (let i = 0; i < req.body.rawMessage.length; i++) {
-        message += "[ID:" + i.toString() + "] " + req.body.rawMessage[i].text + "\n";
+    for (let i = 1; i <= req.body.rawMessage.length; i++) {
+        message += "[ID:" + i.toString() + "] " + req.body.rawMessage[i] + "\n";
     }
+    console.log(message);
 
     const openai = new OpenAIApi(configuration);
     const response = await openai.createCompletion({
         model: "text-davinci-003",
         prompt: message,
-        max_tokens: 7,
+        max_tokens: 100,
         temperature: 0,
     });
 
@@ -101,9 +102,10 @@ app.put('/oasis/promptx1', async (req, res) => {
     let messageID = "";
     for (let i = 0; i < response.data.choices[0].text.length; i++) 
     {
-        if (response.data.choices[0].text[i] === ":")
+        if (response.data.choices[0].text[i] === "[" && response.data.choices[0].text[i + 1] === "I" && 
+        response.data.choices[0].text[i + 2] === "D" && response.data.choices[0].text[i + 3] === ":")
         {
-            i++;
+            i+=4;
             while (response.data.choices[0].text[i] !== "]")
             {
                 messageID += response.data.choices[0].text[i];
@@ -161,4 +163,41 @@ app.put('/oasis/promptx2', async (req, res) => {
         max_tokens: 7,
         temperature: 0,
     });
+
+    let processedResponse = [];
+    let headers = [];
+    let messageID = "";
+    for (let i = 0; i < response.data.choices[0].text.length; i++) 
+    {
+        if (response.data.choices[0].text[i] === "[" && response.data.choices[0].text[i + 1] === "I" && 
+        response.data.choices[0].text[i + 2] === "D" && response.data.choices[0].text[i + 3] === ":")
+        {
+            i+=4;
+            while (response.data.choices[0].text[i] !== "]")
+            {
+                if (response.data.choices[0].text[i] === "H")
+                {
+                    
+                }
+                messageID += response.data.choices[0].text[i];
+                i++;
+            }
+            headers.push(Number(messageID));
+            messageID = "";
+        }
+    }
+    let j = 0;
+    for (let i = 0; i < req.body.rawMessage.length; i++)
+    {
+        if (j < headers.length && headers[j] === i)
+        {
+            processedResponse.push({header: true, message: req.body.rawMessage[i]});
+            j++;
+        }
+        else
+        {
+            processedResponse.push({header: false, message: req.body.rawMessage[i]});
+        }
+    }
+    res.json(processedResponse);
 })
