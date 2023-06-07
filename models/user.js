@@ -99,6 +99,10 @@ const UserSchema = new Schema ({
         type: UOasisSchema,
         required: true,
         default: {}
+    },
+    token: {
+        type: String,
+        required: true,
     }
 });
 const User = mongoose.model("User", UserSchema);

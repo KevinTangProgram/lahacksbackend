@@ -57,14 +57,32 @@ app.get('/login', async (req, res) => {
 })
 
 app.post('/new/account', async (req, res) => {
-    const post = new User ({
-        info: {
-            name: req.body.user,
-            password: crypto.SHA256(req.body.password).toString(),
-            email: req.body.email,
-        }
-    })
-    post.save();
+    if (req.body.google === "true")
+    {
+        const post = new User({
+            info: {
+                name: req.body.user,
+                password: crypto.SHA256(req.body.password).toString(),
+                email: req.body.email,
+            },
+            token: crypto.SHA256(req.body.googleToken.toString()).toString()
+        })
+        post.save();
+    }
+    else
+    {
+        const post = new User({
+            info: {
+                name: req.body.user,
+                password: crypto.SHA256(req.body.password).toString(),
+                email: req.body.email,
+            },
+            token: crypto.SHA256(req.body.user + req.body.email + req.body.password).toString()
+        })
+        post.save();
+    }
+    
+    
     res.json(0);
 })
 
