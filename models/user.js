@@ -77,6 +77,16 @@ const UOasisSchema = new Schema({
         default: []
     }
 }, { _id: false })
+const UTokenSchema = new Schema({
+    ID: {
+        type: String,
+        required: true
+    },
+    key: {
+        type: String,
+        required: true
+    }
+}, { _id: false })
 
 // USER:
 const UserSchema = new Schema ({
@@ -100,8 +110,8 @@ const UserSchema = new Schema ({
         required: true,
         default: {}
     },
-    token: {
-        type: String,
+    ID: {
+        type: string,
         required: true,
     }
 });

@@ -59,16 +59,15 @@ app.get('/login', async (req, res) => {
 
 app.get('/continueWithGoogle', async (req, res) => {
     // Decode google token:
-    const decodedToken = jwt.decode(req.query.token);
+    const googleInfo = jwt.decode(req.query.token);
     // Convert to our JWT:
-    let ID = decodedToken.sub;
-    let key = crypto.SHA256(decodedToken.email).toString();
-    jwt.sign({ID: ID, key: key}, process.env.JWT_SECRET, {expiresIn: '3d'}, (err, token) => {
+    let customToken;
+    jwt.sign({ ID: googleInfo.sub }, process.env.JWT_SECRET, {expiresIn: '3d'}, (err, token) => {
         if (err) {
             throw 'Error creating JWT';
         }
         else {
-            res.json(token);
+            customToken = token;
         }
     });
     // Check if user exists:
