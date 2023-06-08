@@ -104,7 +104,7 @@ const OUsersSchema = new Schema({
 }, { _id: false })
 const ORawMessageSchema = new Schema({
     UUID: {
-        type: Number,
+        type: String,
         required: true
     },
     Timestamp: {
