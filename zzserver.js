@@ -5,6 +5,7 @@ const cohere = require('cohere-ai');
 const crypto = require('crypto-js');
 const nodemailer = require('nodemailer');
 const Dotenv = require("dotenv").config();
+const jwt = require('jsonwebtoken');
 cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
 connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
 //
@@ -54,6 +55,24 @@ app.get('/login', async (req, res) => {
         return;
     }
     res.json("bad boy");
+})
+
+app.get('/continueWithGoogle', async (req, res) => {
+    // Decode google token:
+    const decodedToken = jwt.decode(req.query.token);
+    // Convert to our JWT:
+    let ID = decodedToken.sub;
+    let key = crypto.SHA256(decodedToken.email).toString();
+    jwt.sign({ID: ID, key: key}, process.env.JWT_SECRET, {expiresIn: '3d'}, (err, token) => {
+        if (err) {
+            throw 'Error creating JWT';
+        }
+        else {
+            res.json(token);
+        }
+    });
+    // Check if user exists:
+    
 })
 
 app.post('/new/account', async (req, res) => {
@@ -176,12 +195,12 @@ app.put('/oasis/promptx2/header', async (req, res) => {
 
     const openai = new OpenAIApi(configuration);
     const response = await openai.createCompletion({
-        model: "text-davinci-003",
+        model: "text-davinci-002",
         prompt: message,
         max_tokens: 500,
         temperature: 0,
     });
-    // console.log(response.data.choices[0].text);
+    console.log(response.data.choices[0].text);
 
     // let response = {data: {choices: [{text: "[ID:1H] Existing header: Acid-Base Equilibria\n" +
     //     "[ID:header] Generated header: Henderson Hasselback Equation\n" +
