@@ -12,13 +12,13 @@ const UInfoSchema = new Schema ({
     },
     email: {
         type: String,
-        default: ""
+        required: true
     }
 }, { _id: false })
 const USettingsSchema = new Schema ({
     theme: {
         type: String,
-        default: "light"
+        default: "default"
     },
     notification: {
         type: String,
@@ -111,7 +111,7 @@ const UserSchema = new Schema ({
         default: {}
     },
     ID: {
-        type: string,
+        type: String,
         required: true,
     }
 });

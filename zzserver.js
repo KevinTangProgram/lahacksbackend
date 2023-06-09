@@ -71,12 +71,34 @@ app.get('/continueWithGoogle', async (req, res) => {
         }
     });
     // Check if user exists:
-    
+    let existingUser = await User.findOne({ ID: googleInfo.sub });
+    if (!existingUser) {
+        // Create new user:
+        existingUser = await createAccount({body: { ID: googleInfo.sub, name: googleInfo.name, email: googleInfo.email, password: "*google*" }});
+    }
+    // Return user info:
+    res.json({
+        user: existingUser,
+        token: customToken,
+    });
 })
 
+async function createAccount(req)
+{
+    const user = new User({
+        info: {
+            name: req.body.name,
+            password: req.body.password,
+            email: req.body.email,
+        },
+        ID: req.body.ID,
+    })
+    user.save();
+    return user;
+}
+
 app.post('/new/account', async (req, res) => {
-    if (req.body.google === "true")
-    {
+    if (req.body.google === "true") {
         const post = new User({
             info: {
                 name: req.body.user,
@@ -87,8 +109,7 @@ app.post('/new/account', async (req, res) => {
         })
         post.save();
     }
-    else
-    {
+    else {
         const post = new User({
             info: {
                 name: req.body.user,
@@ -99,8 +120,6 @@ app.post('/new/account', async (req, res) => {
         })
         post.save();
     }
-    
-    
     res.json(0);
 })
 
