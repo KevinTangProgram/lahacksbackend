@@ -1,10 +1,14 @@
+// Boilerplate:
 const express = require('express');
+// const cors = require('cors');
+// const Dotenv = require("dotenv").config();
 const authenticator = express.Router();
-
+// authenticator.use(express.json());
+// authenticator.use(cors());
 // Setup:
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto-js');
-const Dotenv = require("dotenv").config();
+const { User } = require('./database.js');
 
 // Endpoints:
 authenticator.get('/login', async (req, res) => {

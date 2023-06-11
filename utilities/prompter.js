@@ -1,6 +1,10 @@
+// Boilerplate:
 const express = require('express');
+// const cors = require('cors');
+// const Dotenv = require("dotenv").config();
 const prompter = express.Router();
-
+// prompter.use(express.json());
+// prompter.use(cors());
 // Setup:
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({

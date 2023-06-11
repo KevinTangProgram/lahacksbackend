@@ -1,12 +1,13 @@
+// Boilerplate:
 const express = require('express');
+// const cors = require('cors');
+// const Dotenv = require("dotenv").config();
+const database = express();
+// database.use(express.json());
+// database.use(cors());
+// Setup:
 const mongoose = require('mongoose');
-const cors = require('cors');
 connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
-
-const app = express();
-app.use(express.json());
-app.use(cors());
-
 const connectDB = async () => {
     mongoose.set('strictQuery', false);
     await mongoose
@@ -21,11 +22,11 @@ const connectDB = async () => {
 connectDB().then(() => {
     // Database connection established, continue setting up the app
     // ... Define your routers and endpoints here
-    app.listen(8080, () => {
+    database.listen(8080, () => {
         console.log('Server listening on port 8080');
     });
 });
-const User = require("./models/user");
+const User = require("../models/user");
 
-const user = await User.findOne({ 'info.name': "Aaron" });
-console.log(user);
+// Exports:
+module.exports = {User};
