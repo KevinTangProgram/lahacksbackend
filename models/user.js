@@ -12,13 +12,13 @@ const UInfoSchema = new Schema ({
     },
     email: {
         type: String,
-        default: ""
+        required: true
     }
 }, { _id: false })
 const USettingsSchema = new Schema ({
     theme: {
         type: String,
-        default: "light"
+        default: "default"
     },
     notification: {
         type: String,
@@ -77,6 +77,16 @@ const UOasisSchema = new Schema({
         default: []
     }
 }, { _id: false })
+const UTokenSchema = new Schema({
+    ID: {
+        type: String,
+        required: true
+    },
+    key: {
+        type: String,
+        required: true
+    }
+}, { _id: false })
 
 // USER:
 const UserSchema = new Schema ({
@@ -100,7 +110,7 @@ const UserSchema = new Schema ({
         required: true,
         default: {}
     },
-    token: {
+    ID: {
         type: String,
         required: true,
     }

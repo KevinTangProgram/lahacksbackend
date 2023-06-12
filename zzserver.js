@@ -1,110 +1,25 @@
+// Boilerplate:
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const cohere = require('cohere-ai');
-const crypto = require('crypto-js');
-const nodemailer = require('nodemailer');
 const Dotenv = require("dotenv").config();
-const jwt = require('jsonwebtoken');
-cohere.init('EGsygyyzay3tG3CbLuJKmI1zLbWn4wqFYoz321AM'); // This is your trial API key
-connection = "mongodb+srv://aaronkwan:" + process.env.MONGO_PASSWORD + "@fullstackv1.lqn0ait.mongodb.net/?retryWrites=true&w=majority";
-//
-
-const { Configuration, OpenAIApi } = require("openai");
-const configuration = new Configuration({
-    organization: "org-UhyAID0yj3ueKOp8ZQWMQnxW",
-    apiKey: process.env.API_KEY,    //DO NOT PASTE THE KEY HERE
-});
-
-const transporter = nodemailer.createTransport( {
-    service: "Zoho",
-    auth: {
-        user: "awesomeaacommands@gmail.com",
-        pass: process.env.ZOHO_PASSWORD
-    }
-});
-
-const connectDB = async () => {
-    mongoose.set('strictQuery', false);
-
-    await mongoose
-        .connect (connection, 
-            {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-            })
-            .then(() => console.log("Connected to DB"))
-            .catch(console.error);
-}
-
 const app = express();
 app.use(express.json());
 app.use(cors());
+// Setup:
 
-connectDB().then(() => {
-    app.listen(8080, () => {console.log("Server listening on port 8080");});
-})
+// Prompter:
+const prompter = require('./utilities/prompter.js');
+app.use('/oasis/generate', prompter);
+// Authenticator:
+const authenticator = require('./utilities/authenticator.js');
+app.use('/user', authenticator);
 
-const User = require("./models/user");
-//const Group = require("./models/group");
 
-app.get('/login', async (req, res) => {
-    const user = await User.findOne({ 'info.name': req.query.user });
-    if (user?.info.password === crypto.SHA256(req.query.password).toString()) {
-        res.json(user); 
-        return;
-    }
-    res.json("bad boy");
-})
 
-app.get('/continueWithGoogle', async (req, res) => {
-    // Decode google token:
-    const decodedToken = jwt.decode(req.query.token);
-    // Convert to our JWT:
-    let ID = decodedToken.sub;
-    let key = crypto.SHA256(decodedToken.email).toString();
-    jwt.sign({ID: ID, key: key}, process.env.JWT_SECRET, {expiresIn: '3d'}, (err, token) => {
-        if (err) {
-            throw 'Error creating JWT';
-        }
-        else {
-            res.json(token);
-        }
-    });
-    // Check if user exists:
-    
-})
+// Endpoints:
 
-app.post('/new/account', async (req, res) => {
-    if (req.body.google === "true")
-    {
-        const post = new User({
-            info: {
-                name: req.body.user,
-                password: crypto.SHA256(req.body.password).toString(),
-                email: req.body.email,
-            },
-            token: crypto.SHA256(req.body.googleToken.toString()).toString()
-        })
-        post.save();
-    }
-    else
-    {
-        const post = new User({
-            info: {
-                name: req.body.user,
-                password: crypto.SHA256(req.body.password).toString(),
-                email: req.body.email,
-            },
-            token: crypto.SHA256(req.body.user + req.body.email + req.body.password).toString()
-        })
-        post.save();
-    }
-    
-    
-    res.json(0);
-})
 
+<<<<<<< HEAD
 app.put('/oasis/promptx1', async (req, res) => {
     let message = "Detect any message IDs that may be headers in the given sequence of notes. " + 
     "Return a line starting with '[headers]' followed by the IDs of any detected headers, separated by spaces. " + 
@@ -475,3 +390,5 @@ app.put('/oasis/promptx3/bullet', async (req, res) => {
     }
     res.json(processedResponse);
 })
+=======
+>>>>>>> a5ff128e583002dcfec39a1b9b6af12a10ba4f52
