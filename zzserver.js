@@ -194,13 +194,13 @@ app.put('/oasis/promptx2/header', async (req, res) => {
     }
 
     const openai = new OpenAIApi(configuration);
-    const response = await openai.createCompletion({
-        model: "text-davinci-002",
-        prompt: message,
+    const response = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [{role: "user", content: message}],
         max_tokens: 500,
         temperature: 0,
     });
-    console.log(response.data.choices[0].text);
+    console.log(response.data.choices[0].message.content);
 
     // let response = {data: {choices: [{text: "[ID:1H] Existing header: Acid-Base Equilibria\n" +
     //     "[ID:header] Generated header: Henderson Hasselback Equation\n" +
@@ -226,29 +226,29 @@ app.put('/oasis/promptx2/header', async (req, res) => {
     let headers = [];
     let nonHeaders = [];
     let messageID = "";
-    for (let i = 0; i < response.data.choices[0].text.length - 4; i++) 
+    for (let i = 0; i < response.data.choices[0].message.content.length - 4; i++) 
     {
-        if (response.data.choices[0].text[i] === "[" && response.data.choices[0].text[i + 1] === "I" && 
-        response.data.choices[0].text[i + 2] === "D" && response.data.choices[0].text[i + 3] === ":")
+        if (response.data.choices[0].message.content[i] === "[" && response.data.choices[0].message.content[i + 1] === "I" && 
+        response.data.choices[0].message.content[i + 2] === "D" && response.data.choices[0].message.content[i + 3] === ":")
         {
             i+=4;
-            while (response.data.choices[0].text[i] !== "]")
+            while (response.data.choices[0].message.content[i] !== "]")
             {
-                messageID += response.data.choices[0].text[i];
+                messageID += response.data.choices[0].message.content[i];
                 i++;
             }
             i+=2;
             let lineMessage = "";
-            for (; i < response.data.choices[0].text.length; i++)
+            for (; i < response.data.choices[0].message.content.length; i++)
             {
-                if (response.data.choices[0].text[i + 1] === "[" && response.data.choices[0].text[i + 2] === "I" && 
-                response.data.choices[0].text[i + 3] === "D" && response.data.choices[0].text[i + 4] === ":")
+                if (response.data.choices[0].message.content[i + 1] === "[" && response.data.choices[0].message.content[i + 2] === "I" && 
+                response.data.choices[0].message.content[i + 3] === "D" && response.data.choices[0].message.content[i + 4] === ":")
                 {
                     break;
                 }
                 else
                 {
-                    lineMessage += response.data.choices[0].text[i];
+                    lineMessage += response.data.choices[0].message.content[i];
                 }
             }
             if (messageID.includes("H") || messageID.includes("header"))
@@ -263,7 +263,7 @@ app.put('/oasis/promptx2/header', async (req, res) => {
             messageID = "";
         }
     }
-    headers.push([response.data.choices[0].text.length + 1, ""])
+    headers.push([response.data.choices[0].message.content.length + 1, ""])
     let j = 0;
     for (let i = 0; i < headers.length; i++)
     {
