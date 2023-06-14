@@ -34,8 +34,15 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
         // Check if user exists:
         let existingUser = await User.findOne({ ID: googleInfo.sub });
         if (!existingUser) {
+            // Check if email is already in use:
+            existingUser = await User.findOne({ "info.email": googleInfo.email });
+            if (existingUser) {
+                // Disallow account creation:
+                res.status(400).json({ error: 'There is already an account associated with your email address - try logging in manually.' });
+                return;
+            }
             // Create new user:
-            existingUser = await createAccount({ body: { ID: googleInfo.sub, name: googleInfo.name, email: googleInfo.email, password: "*google*" } });
+            existingUser = await createAccount({ ID: googleInfo.sub, username: googleInfo.name, email: googleInfo.email, password: "[google]" });
         }
         // Return user info:
         res.json({
@@ -46,31 +53,6 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
     catch (error) {
         res.status(400).json({ error: 'Problem connecting to google - please try again in a moment.' });
     }
-})
-authenticator.post('/createNew', async (req, res) => {
-    if (req.body.google === "true") {
-        const post = new User({
-            info: {
-                name: req.body.user,
-                password: crypto.SHA256(req.body.password).toString(),
-                email: req.body.email,
-            },
-            token: crypto.SHA256(req.body.googleToken.toString()).toString()
-        })
-        post.save();
-    }
-    else {
-        const post = new User({
-            info: {
-                name: req.body.user,
-                password: crypto.SHA256(req.body.password).toString(),
-                email: req.body.email,
-            },
-            token: crypto.SHA256(req.body.user + req.body.email + req.body.password).toString()
-        })
-        post.save();
-    }
-    res.json(0);
 })
 authenticator.get('/verifyEmail', async (req, res) => {
     // Create token from email:
@@ -117,15 +99,39 @@ authenticator.get('/setup', async (req, res) => {
         res.status(400).json({ error: 'Invalid or expired token - please resend the verification.' });
     }
 })
+authenticator.post('/createAccount', async (req, res) => {
+    // Check if user exists:
+    const existingUser = await User.findOne({ "info.email": req.body.email });
+    if (existingUser) {
+        // Email already in use:
+        res.status(400).json({ error: 'There is already an account associated with your email address - try continue with google instead!' });
+        return;
+    }
+    // Create new user:
+    const ID = crypto.SHA256(req.body.username + req.body.email + req.body.password).toString();
+    try {
+        const newUser = await createAccount({ ID: ID, username: req.body.username, email: req.body.email, password: req.body.password });
+        // Create custom JWT:
+        const customToken = await jwt.sign({ ID: ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        // Return user info:
+        res.json({
+            user: newUser,
+            token: customToken,
+        });
+    }
+    catch (error) {
+        res.status(400).json({ error: 'Problem creating account - please try again in a moment.' });
+    }
+})
 // Utils:
 async function createAccount(req) {
     const user = new User({
         info: {
-            name: req.body.name,
-            password: req.body.password,
-            email: req.body.email,
+            username: req.username,
+            password: req.password,
+            email: req.email,
         },
-        ID: req.body.ID,
+        ID: req.ID,
     })
     user.save();
     return user;
