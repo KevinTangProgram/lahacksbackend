@@ -15,15 +15,31 @@ const transporter = nodemailer.createTransport({
         pass: process.env.ZOHO_PASSWORD
     }
 });
+const emailCooldownCache = [];
+const emailCooldown = 1000 * 60 * 1; // 1 minute
+const cacheMaxSize = 10;
 
 // Endpoints:
 authenticator.get('/login', async (req, res) => {
-    const user = await User.findOne({ 'info.name': req.query.user });
-    if (user?.info.password === crypto.SHA256(req.query.password).toString()) {
-        res.json(user);
+    // Find user:
+    const existingUser = await User.findOne({ "info.email": req.query.email.toLowerCase() });
+    if (!existingUser) {
+        // Disallow login:
+        res.status(400).json({ error: 'Incorrect email or password combination.' });
         return;
     }
-    res.json("bad boy");
+    // Check password:
+    if (existingUser.info.password !== req.query.password || req.query.password === "[google]") {
+        // Disallow login:
+        res.status(400).json({ error: 'Incorrect email or password combination.' });
+        return;
+    }
+    // Return user info:
+    const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+    res.json({
+        user: existingUser,
+        token: customToken,
+    });
 })
 authenticator.get('/continueWithGoogle', async (req, res) => {
     try {
@@ -55,6 +71,18 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
     }
 })
 authenticator.get('/verifyEmail', async (req, res) => {
+    // Check if email is already in use:
+    existingUser = await User.findOne({ "info.email": req.query.email });
+    if (existingUser) {
+        // Disallow account creation:
+        res.status(400).json({ error: 'There is already an account associated with your email address - try logging in instead.' });
+        return;
+    }
+    // Check for email cooldowns:
+    if (checkEmailCooldown(req.query.email, req.ip)) {
+        res.status(400).json({ error: 'Please wait a bit before resending.' });
+        return;
+    }
     // Create token from email:
     const emailToken = await jwt.sign({ ID: req.query.email }, process.env.JWT_SECRET, { expiresIn: '30m' });
     // Send token as link to email:
@@ -87,7 +115,9 @@ authenticator.get('/verifyEmail', async (req, res) => {
             res.status(400).json({ error: 'Error sending email: check that it is valid!' });
         }
     });
-    res.json(0);
+    // Cache email cooldown:
+    cacheEmailCooldown(req.query.email, req.ip);
+    res.json("Email sent - make sure to check your spam or junk folder as well!");
 })
 authenticator.get('/setup', async (req, res) => {
     try {
@@ -104,7 +134,7 @@ authenticator.post('/createAccount', async (req, res) => {
     const existingUser = await User.findOne({ "info.email": req.body.email });
     if (existingUser) {
         // Email already in use:
-        res.status(400).json({ error: 'There is already an account associated with your email address - try continue with google instead!' });
+        res.status(400).json({ error: 'There is already an account associated with your email address - try logging in instead!' });
         return;
     }
     // Create new user:
@@ -135,6 +165,34 @@ async function createAccount(req) {
     })
     user.save();
     return user;
+}
+function checkEmailCooldown(email, ip) {
+    const time = Date.now();
+    // Loop through array of {email, ip, time} objects:
+    for (let i = 0; i < emailCooldownCache.length; i++) {
+        // Check if email or ip match:
+        if (emailCooldownCache[i].email === email || emailCooldownCache[i].ip === ip) {
+            // Check if time is within 5 minutes:
+            if (time - emailCooldownCache[i].time < emailCooldown) {
+                return true;
+            }
+            else {
+                // Update time:
+                emailCooldownCache[i].time = time;
+                return false;
+            }
+        }    
+    }   
+    return false;
+}
+function cacheEmailCooldown(email, ip) {
+    // Add to cache:
+    const time = Date.now();
+    if (emailCooldownCache.length >= cacheMaxSize) {
+        // Remove first element:
+        emailCooldownCache.shift();
+    }
+    emailCooldownCache.push({ email: email, ip: ip, time: time });
 }
 
 module.exports = authenticator;
