@@ -16,10 +16,11 @@ const transporter = nodemailer.createTransport({
     }
 });
 const emailCooldownCache = [];
-const emailCooldown = 1000 * 60 * 1; // 1 minute
+const emailCooldown = 1000 * 59 * 1; // 59 seconds
 const cacheMaxSize = 10;
 
 // Endpoints:
+    // Logins:
 authenticator.get('/login', async (req, res) => {
     // Find user:
     const existingUser = await User.findOne({ "info.email": req.query.email.toLowerCase() });
@@ -70,26 +71,28 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
         res.status(400).json({ error: 'Problem connecting to google - please try again in a moment.' });
     }
 })
+    // Account creation:
 authenticator.get('/verifyEmail', async (req, res) => {
+    const email = req.query.email.toLowerCase();
     // Check if email is already in use:
-    existingUser = await User.findOne({ "info.email": req.query.email });
+    existingUser = await User.findOne({ "info.email": email });
     if (existingUser) {
         // Disallow account creation:
         res.status(400).json({ error: 'There is already an account associated with your email address - try logging in instead.' });
         return;
     }
     // Check for email cooldowns:
-    if (checkEmailCooldown(req.query.email, req.ip)) {
+    if (checkEmailCooldown(email, req.ip)) {
         res.status(400).json({ error: 'Please wait a bit before resending.' });
         return;
     }
     // Create token from email:
-    const emailToken = await jwt.sign({ ID: req.query.email }, process.env.JWT_SECRET, { expiresIn: '30m' });
+    const emailToken = await jwt.sign({ ID: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
     // Send token as link to email:
     const link = process.env.PUBLIC_URL + "/user/setup/" + emailToken;
     const options = {
         from: "ideaoasis@zohomail.com",
-        to: req.query.email,
+        to: email,
         subject: "Idea Oasis - Account Setup",
         html: `
         Hello, <br><br>
@@ -116,7 +119,7 @@ authenticator.get('/verifyEmail', async (req, res) => {
         }
     });
     // Cache email cooldown:
-    cacheEmailCooldown(req.query.email, req.ip);
+    cacheEmailCooldown(email, req.ip);
     res.json("Email sent - make sure to check your spam or junk folder as well!");
 })
 authenticator.get('/setup', async (req, res) => {
@@ -130,27 +133,123 @@ authenticator.get('/setup', async (req, res) => {
     }
 })
 authenticator.post('/createAccount', async (req, res) => {
-    // Check if user exists:
-    const existingUser = await User.findOne({ "info.email": req.body.email });
-    if (existingUser) {
-        // Email already in use:
-        res.status(400).json({ error: 'There is already an account associated with your email address - try logging in instead!' });
-        return;
-    }
-    // Create new user:
-    const ID = crypto.SHA256(req.body.username + req.body.email + req.body.password).toString();
     try {
-        const newUser = await createAccount({ ID: ID, username: req.body.username, email: req.body.email, password: req.body.password });
-        // Create custom JWT:
-        const customToken = await jwt.sign({ ID: ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
-        // Return user info:
-        res.json({
-            user: newUser,
-            token: customToken,
-        });
+        // Verify token:
+        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        // Check if user exists:
+        const existingUser = await User.findOne({ "info.email": email });
+        if (existingUser) {
+            // Email already in use:
+            res.status(400).json({ error: 'There is already an account associated with your email address - try logging in instead!' });
+            return;
+        }
+        // Create new user:
+        const ID = crypto.SHA256(req.body.username + email + req.body.password).toString();
+        try {
+            const newUser = await createAccount({ ID: ID, username: req.body.username, email: email, password: req.body.password });
+            // Create custom JWT:
+            const customToken = await jwt.sign({ ID: ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+            // Return user info:
+            res.json({
+                user: newUser,
+                token: customToken,
+            });
+        }
+        catch (error) {
+            res.status(400).json({ error: 'Problem creating account - please try again in a moment.' });
+        }
     }
     catch (error) {
-        res.status(400).json({ error: 'Problem creating account - please try again in a moment.' });
+        res.status(400).json({ error: "We're sorry, your token just expired - please resend the verification." });
+    }
+})
+    // Password reset:
+authenticator.get('/resetPassword', async (req, res) => {
+    const email = req.query.email.toLowerCase();
+    // Check if email matches an account:
+    existingUser = await User.findOne({ "info.email": email });
+    if (!existingUser) {
+        // Don't send email:
+        res.status(400).json({ error: 'There is no account associated with your email address - try creating a new one instead.' });
+        return;
+    }
+    // Check for email cooldowns:
+    if (checkEmailCooldown(email, req.ip)) {
+        res.status(400).json({ error: 'Please wait a bit before resending.' });
+        return;
+    }
+    // Create token from email:
+    const emailToken = await jwt.sign({ ID: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
+    // Send token as link to email:
+    const link = process.env.PUBLIC_URL + "/user/reset/" + emailToken;
+    const options = {
+        from: "ideaoasis@zohomail.com",
+        to: email,
+        subject: "Idea Oasis - Password Reset",
+        html: `
+        Hi ${existingUser.info.username}, <br><br>
+        
+        Someone recently requested a password reset for your Idea Oasis account. <br>
+        If this was you, set a new password <a href="${link}">here</a>. <br><br>
+
+        Not you? You can safely ignore and delete this email. <br><br>
+
+        To keep your account secure, please don't forward this email to anyone. <br><br>
+
+        Thanks, <br>
+        Idea Oasis <br>
+        <a href="${process.env.PUBLIC_URL}">
+            <img src="cid:ideaoasislogo2023@nodemailer.com" style="width: 30px; height: 30px;" />
+        </a>`,
+        attachments: [{
+            filename: 'logo.png',
+            path: path.join(__dirname, '..', 'resources', 'iconLogo.png'),
+            cid: 'ideaoasislogo2023@nodemailer.com'
+        }]
+    };
+    transporter.sendMail(options, function (err, info) {
+        if (err) {
+            // Error:
+            res.status(400).json({ error: 'Error sending email: check that it is valid!' });
+        }
+    });
+    // Cache email cooldown:
+    cacheEmailCooldown(email, req.ip);
+    res.json("Email sent - make sure to check your spam or junk folder as well!");
+})
+authenticator.get('/resetPage', async (req, res) => {
+    try {
+        // Verify token:
+        const email = jwt.verify(req.query.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        res.json(email);
+    }
+    catch (error) {
+        res.status(400).json({ error: 'Invalid or expired token - please request a new password reset.' });
+    }
+})
+authenticator.post('/reset', async (req, res) => {
+    try {
+        // Verify token:
+        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        // Update user info:
+        try {
+            const existingUser = await User.findOne({ "info.email": email });
+            existingUser.info.password = req.body.password;
+            existingUser.save();
+            // Create custom JWT:
+            const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+            // Return user info:
+            res.json({
+                user: existingUser,
+                token: customToken,
+            });
+        }
+        catch (error) {
+            res.status(400).json({ error: 'Problem resetting password - please try again in a moment.' });
+        }
+    }
+    catch (error) {
+        res.status(400).json({ error: "We're sorry, your token just expired - please request a new password reset." });
     }
 })
 // Utils:
