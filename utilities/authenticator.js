@@ -35,6 +35,10 @@ authenticator.get('/login', async (req, res) => {
         res.status(400).json({ error: 'Incorrect email or password combination.' });
         return;
     }
+    // Update Login Stats:
+    existingUser.stats.lastLogin = Date.now();
+    existingUser.stats.loginAmount++;
+    existingUser.save();
     // Return user info:
     const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
     res.json({
@@ -61,6 +65,10 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
             // Create new user:
             existingUser = await createAccount({ ID: googleInfo.sub, username: googleInfo.name, email: googleInfo.email, password: "[google]" });
         }
+        // Update Login Stats:
+        existingUser.stats.lastLogin = Date.now();
+        existingUser.stats.loginAmount++;
+        existingUser.save();
         // Return user info:
         res.json({
             user: existingUser,
@@ -73,6 +81,7 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
 })
     // Account creation:
 authenticator.get('/verifyEmail', async (req, res) => {
+    // Grab email:
     const email = req.query.email.toLowerCase();
     // Check if email is already in use:
     existingUser = await User.findOne({ "info.email": email });
