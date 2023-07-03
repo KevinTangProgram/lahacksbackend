@@ -22,6 +22,15 @@ const cacheMaxSize = 10;
 // Endpoints:
     // Logins:
 authenticator.get('/login', async (req, res) => {
+    // Sanitize input:
+    if (validateInput("email", req.query.email) !== true) {
+        res.status(400).json({ error: validateInput("email", req.query.email) });
+        return;
+    }
+    if (validateInput("password", req.query.password) !== true) {
+        res.status(400).json({ error: validateInput("password", req.query.password) });
+        return;
+    }
     // Find user:
     const existingUser = await User.findOne({ "info.email": req.query.email.toLowerCase() });
     if (!existingUser) {
@@ -30,7 +39,7 @@ authenticator.get('/login', async (req, res) => {
         return;
     }
     // Check password:
-    if (existingUser.info.password !== req.query.password || req.query.password === "[google]") {
+    if (req.query.password === "[google]" || existingUser.info.password !== hashed(req.query.password)) {
         // Disallow login:
         res.status(400).json({ error: 'Incorrect email or password combination.' });
         return;
@@ -81,6 +90,11 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
 })
     // Account creation:
 authenticator.get('/verifyEmail', async (req, res) => {
+    // Sanitize input:
+    if (validateInput("email", req.query.email) !== true) {
+        res.status(400).json({ error: validateInput("email", req.query.email) });
+        return;
+    }
     // Grab email:
     const email = req.query.email.toLowerCase();
     // Check if email is already in use:
@@ -143,6 +157,15 @@ authenticator.get('/setup', async (req, res) => {
 })
 authenticator.post('/createAccount', async (req, res) => {
     try {
+        // Sanitize input:
+        if (validateInput("username", req.body.username) !== true) {
+            res.status(400).json({ error: validateInput("username", req.query.username) });
+            return;
+        }
+        if (validateInput("password", req.body.password) !== true) {
+            res.status(400).json({ error: validateInput("password", req.query.password) });
+            return;
+        }
         // Verify token:
         const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
         // Check if user exists:
@@ -155,7 +178,7 @@ authenticator.post('/createAccount', async (req, res) => {
         // Create new user:
         const ID = crypto.SHA256(req.body.username + email + req.body.password).toString();
         try {
-            const newUser = await createAccount({ ID: ID, username: req.body.username, email: email, password: req.body.password });
+            const newUser = await createAccount({ ID: ID, username: req.body.username, email: email, password: hashed(req.body.password) });
             // Create custom JWT:
             const customToken = await jwt.sign({ ID: ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
             // Return user info:
@@ -174,6 +197,11 @@ authenticator.post('/createAccount', async (req, res) => {
 })
     // Password reset:
 authenticator.get('/resetPassword', async (req, res) => {
+    // Sanitize input:
+    if (validateInput("email", req.query.email) !== true) {
+        res.status(400).json({ error: validateInput("email", req.query.email) });
+        return;
+    }
     const email = req.query.email.toLowerCase();
     // Check if email matches an account:
     existingUser = await User.findOne({ "info.email": email });
@@ -238,12 +266,17 @@ authenticator.get('/resetPage', async (req, res) => {
 })
 authenticator.post('/reset', async (req, res) => {
     try {
+        // Sanitize input:
+        if (validateInput("password", req.body.password) !== true) {
+            res.status(400).json({ error: validateInput("password", req.query.password) });
+            return;
+        }
         // Verify token:
         const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
         // Update user info:
         try {
             const existingUser = await User.findOne({ "info.email": email });
-            existingUser.info.password = req.body.password;
+            existingUser.info.password = hashed(req.body.password);
             existingUser.save();
             // Create custom JWT:
             const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
@@ -301,6 +334,57 @@ function cacheEmailCooldown(email, ip) {
         emailCooldownCache.shift();
     }
     emailCooldownCache.push({ email: email, ip: ip, time: time });
+}
+function validateInput(type, input) {
+    const hasBadChars = (input) => {
+        const pattern = /[:;[\](){}`'""]/;
+        return pattern.test(input);
+    }
+    if (type === "email") {
+        const maxLength = 254;
+        if (input.length > maxLength) {
+            return "Email cannot be longer than " + maxLength + " characters."
+        }
+        if (hasBadChars(input)) {
+            return "Email cannot contain special characters."
+        }
+        if (input.includes(" ")) {
+            return "Email cannot contain spaces."
+        }
+        const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (pattern.test(input)) {
+            return true;
+        }
+        return "Invalid email address - Check for special characters or whitespace."
+    }
+    if (type === "username") {
+        const minLength = 3;
+        const maxLength = 20;
+        if (input.length < minLength || input.length > maxLength) {
+            return "Username must be between " + minLength + " and " + maxLength + " characters long."
+        }
+        if (hasBadChars(input)) {
+            return "Username cannot contain special characters."
+        }
+        return true;
+    }
+    if (type === "password") {
+        const minLength = 5;
+        const maxLength = 20;
+        if (input.length < minLength || input.length > maxLength) {
+            return "Password must be between " + minLength + " and " + maxLength + " characters long."
+        }
+        if (hasBadChars(input)) {
+            return "Password cannot contain special characters."
+        }
+        if (input.includes(" ")) {
+            return "Password cannot contain spaces."
+        }
+        return true;
+    }
+}
+function hashed(password) {
+    return crypto.SHA256(password + process.env.PASSWORD_SALT).toString();
 }
 
 module.exports = authenticator;
