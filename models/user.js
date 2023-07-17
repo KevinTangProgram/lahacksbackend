@@ -4,7 +4,8 @@ const Schema = mongoose.Schema;
 const UInfoSchema = new Schema ({
     username: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
     password: {
         type: String,
@@ -12,7 +13,9 @@ const UInfoSchema = new Schema ({
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
+        unique: true
     }
 }, { _id: false })
 const USettingsSchema = new Schema ({
@@ -65,26 +68,16 @@ const UStatsSchema = new Schema ({
 }, { _id: false })
 const UOasisSchema = new Schema({
     ownOases: {
-        type: Array,
+        type: [Schema.Types.ObjectId],
         default: []
     },
     joinedOases: {
-        type: Array,
+        type: [Schema.Types.ObjectId],
         default: []
     },
     archivedOases: {
-        type: Array,
+        type: [Schema.Types.ObjectId],
         default: []
-    }
-}, { _id: false })
-const UTokenSchema = new Schema({
-    ID: {
-        type: String,
-        required: true
-    },
-    key: {
-        type: String,
-        required: true
     }
 }, { _id: false })
 
@@ -110,10 +103,6 @@ const UserSchema = new Schema ({
         required: true,
         default: {}
     },
-    ID: {
-        type: String,
-        required: true,
-    }
 });
 const User = mongoose.model("User", UserSchema);
 module.exports = User;

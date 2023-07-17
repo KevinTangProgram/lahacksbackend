@@ -3,6 +3,7 @@ const express = require('express');
 const authenticator = express.Router();
 
 // Setup:
+const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto-js');
 const { User } = require('./database.js');
@@ -39,17 +40,23 @@ authenticator.get('/login', async (req, res) => {
         return;
     }
     // Check password:
-    if (req.query.password === "[google]" || existingUser.info.password !== hashed(req.query.password)) {
+    if (existingUser.info.password !== hashed(req.query.password)) {
         // Disallow login:
         res.status(400).json({ error: 'Incorrect email or password combination.' });
         return;
     }
     // Update Login Stats:
-    existingUser.stats.lastLogin = Date.now();
-    existingUser.stats.loginAmount++;
-    existingUser.save();
+    try {
+        existingUser.stats.lastLogin = Date.now();
+        existingUser.stats.loginAmount++;
+        await existingUser.save();
+    }
+    catch (error) {
+        res.status(400).json({ error: 'Unable to sync user data - please try again.' });
+        return;
+    }
     // Return user info:
-    const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+    const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
     res.json({
         user: existingUser,
         token: customToken,
@@ -57,35 +64,41 @@ authenticator.get('/login', async (req, res) => {
 })
 authenticator.get('/continueWithGoogle', async (req, res) => {
     try {
-        // Decode google token:
-        const googleInfo = jwt.decode(req.query.token);
-        // Convert to our JWT:
-        const customToken = await jwt.sign({ ID: googleInfo.sub }, process.env.JWT_SECRET, { expiresIn: '3d' });
-        // Check if user exists:
-        let existingUser = await User.findOne({ ID: googleInfo.sub });
-        if (!existingUser) {
-            // Check if email is already in use:
-            existingUser = await User.findOne({ "info.email": googleInfo.email });
-            if (existingUser) {
-                // Disallow account creation:
-                res.status(400).json({ error: 'There is already an account associated with your email address - try logging in manually.' });
-                return;
-            }
-            // Create new user:
-            existingUser = await createAccount({ ID: googleInfo.sub, username: googleInfo.name, email: googleInfo.email, password: "[google]" });
-        }
-        // Update Login Stats:
-        existingUser.stats.lastLogin = Date.now();
-        existingUser.stats.loginAmount++;
-        existingUser.save();
-        // Return user info:
-        res.json({
-            user: existingUser,
-            token: customToken,
+        // Verify & Decode google token:
+        const client = new OAuth2Client();
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
         });
+        const googleInfo = ticket.getPayload();
+        // Grab user info:
+        let existingUser = await User.findOne({ "info.email": googleInfo.email });
+        if (!existingUser) {
+            // Create new user:
+            existingUser = await createAccount({ username: googleInfo.name, email: googleInfo.email, password: hashed(googleInfo.sub) });
+        }
+        if (existingUser) {
+            // Check if it is a google account:
+            if (existingUser.info.password !== hashed(googleInfo.sub)) {
+                // Disallow login:
+                //res.status(400).json({ error: 'There is already an account associated with your email address - try logging in manually.' });
+                //return;
+                    // Allow login, I guess? 
+            }
+            // Update Login Stats:
+            existingUser.stats.lastLogin = Date.now();
+            existingUser.stats.loginAmount++;
+            existingUser.save();
+            // Return user info:
+            const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+            res.json({
+                user: existingUser,
+                token: customToken,
+            });
+        }
     }
     catch (error) {
-        res.status(400).json({ error: 'Problem connecting to google - please try again in a moment.' });
+        res.status(400).json({ error: 'Problem connecting to google or database - please try again in a moment.' });
     }
 })
     // Account creation:
@@ -176,11 +189,10 @@ authenticator.post('/createAccount', async (req, res) => {
             return;
         }
         // Create new user:
-        const ID = crypto.SHA256(req.body.username + email + req.body.password).toString();
         try {
-            const newUser = await createAccount({ ID: ID, username: req.body.username, email: email, password: hashed(req.body.password) });
+            const newUser = await createAccount({ username: req.body.username, email: email, password: hashed(req.body.password) });
             // Create custom JWT:
-            const customToken = await jwt.sign({ ID: ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+            const customToken = await jwt.sign({ ID: newUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
             // Return user info:
             res.json({
                 user: newUser,
@@ -279,7 +291,7 @@ authenticator.post('/reset', async (req, res) => {
             existingUser.info.password = hashed(req.body.password);
             existingUser.save();
             // Create custom JWT:
-            const customToken = await jwt.sign({ ID: existingUser.ID }, process.env.JWT_SECRET, { expiresIn: '3d' });
+            const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
             // Return user info:
             res.json({
                 user: existingUser,
@@ -302,10 +314,28 @@ async function createAccount(req) {
             password: req.password,
             email: req.email,
         },
-        ID: req.ID,
     })
-    user.save();
+    try {
+        await user.save();
+    }
+    catch (error) {
+        throw error;
+    }
     return user;
+}
+async function validateUser(token) {
+    try {
+        // Verify token:
+        const ID = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        const existingUser = await User.findOne({ ID: ID });
+        if (existingUser) {
+            return existingUser;
+        }
+        return false;
+    }
+    catch (error) {
+        return false;
+    }
 }
 function checkEmailCooldown(email, ip) {
     const time = Date.now();
@@ -360,8 +390,9 @@ function validateInput(type, input) {
     if (type === "username") {
         const minLength = 3;
         const maxLength = 20;
-        if (input.length < minLength || input.length > maxLength) {
-            return "Username must be between " + minLength + " and " + maxLength + " characters long."
+        const nonWhitespaceInput = input.replace(/\s/g, "");
+        if (nonWhitespaceInput.length < minLength || input.length > maxLength) {
+            return "Username must be between " + minLength + " and " + maxLength + " non-whitespace characters long."
         }
         if (hasBadChars(input)) {
             return "Username cannot contain special characters."
@@ -387,4 +418,5 @@ function hashed(password) {
     return crypto.SHA256(password + process.env.PASSWORD_SALT).toString();
 }
 
-module.exports = authenticator;
+
+module.exports = { authenticator, validateUser};

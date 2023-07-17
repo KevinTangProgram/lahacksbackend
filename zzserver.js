@@ -30,7 +30,10 @@ connectDB().then(() => {
 const prompter = require('./utilities/prompter.js');
 app.use('/oasis/generate', prompter);
 // Authenticator:
-const authenticator = require('./utilities/authenticator.js');
+const { authenticator } = require('./utilities/authenticator.js');
 app.use('/user', authenticator);
+// Oasis:
+const oasis = require('./utilities/oasis.js');
+app.use('/oasis', oasis);
 
 // Endpoints:

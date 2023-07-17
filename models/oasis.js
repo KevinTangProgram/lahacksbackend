@@ -4,7 +4,8 @@ const Schema = mongoose.Schema;
 const OInfoSchema = new Schema ({
     title: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
     description: {
         type: String,
@@ -64,6 +65,10 @@ const OStateSchema = new Schema({
         type: Number,
         default: Date.now()
     },
+    lastViewDate: {
+        type: Number,
+        default: Date.now()
+    },
     lastEditDate: {
         type: Number,
         default: Date.now()
@@ -88,23 +93,20 @@ const OStatsSchema = new Schema({
 const OUsersSchema = new Schema({
     owner: {
         type: Schema.Types.ObjectId,
-        ref: owner,
         required: true
     },
     editors: {
-        type: Array,
-        ref: editor,
+        type: [Schema.Types.ObjectId],
         default: []
     },
     viewers: {
-        type: Array,
-        ref: viewer,
+        type: [Schema.Types.ObjectId],
         default: []
     }
 }, { _id: false })
 const ORawMessageSchema = new Schema({
     UUID: {
-        type: String,
+        type: Schema.Types.UUID,
         required: true
     },
     Timestamp: {
@@ -113,7 +115,6 @@ const ORawMessageSchema = new Schema({
     },
     Sender: {
         type: Schema.Types.ObjectId,
-        ref: owner,
         required: true
     },
     Content: {
@@ -123,7 +124,7 @@ const ORawMessageSchema = new Schema({
 }, { _id: false })
 const OProcessedMessageSchema = new Schema({
     UUID: {
-        type: Number,
+        type: Schema.Types.UUID,
         required: true
     },
     Marker: {
@@ -131,8 +132,7 @@ const OProcessedMessageSchema = new Schema({
         required: true
     },
     RawUUID: {
-        type: Number,
-        ref: originalMessage,
+        type: Schema.Types.UUID,
     },
     Content: {
         type: String,
@@ -179,7 +179,7 @@ const OasisSchema = new Schema ({
         type: OContentSchema,
         required: true,
         default: {}
-    }
+    },
 });
 const Oasis = mongoose.model("Oasis", OasisSchema);
 module.exports = Oasis;
