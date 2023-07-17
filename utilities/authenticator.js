@@ -61,6 +61,7 @@ authenticator.get('/login', async (req, res) => {
         user: existingUser,
         token: customToken,
     });
+    // test
 })
 authenticator.get('/continueWithGoogle', async (req, res) => {
     try {
