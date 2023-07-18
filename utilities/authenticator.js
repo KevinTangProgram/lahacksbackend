@@ -52,7 +52,7 @@ authenticator.get('/login', async (req, res) => {
         await existingUser.save();
     }
     catch (error) {
-        res.status(400).json({ error: 'Unable to sync user data - please try again.' });
+        res.status(400).json({ error: 'Unable to prepare account - please try again in a moment.' });
         return;
     }
     // Return user info:
@@ -61,14 +61,13 @@ authenticator.get('/login', async (req, res) => {
         user: existingUser,
         token: customToken,
     });
-    // test
 })
 authenticator.get('/continueWithGoogle', async (req, res) => {
     try {
         // Verify & Decode google token:
         const client = new OAuth2Client();
         const ticket = await client.verifyIdToken({
-            idToken: token,
+            idToken: req.query.token,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
         const googleInfo = ticket.getPayload();
@@ -124,7 +123,7 @@ authenticator.get('/verifyEmail', async (req, res) => {
         return;
     }
     // Create token from email:
-    const emailToken = await jwt.sign({ ID: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
+    const emailToken = await jwt.sign({ email: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
     // Send token as link to email:
     const link = process.env.PUBLIC_URL + "/user/setup/" + emailToken;
     const options = {
@@ -162,7 +161,7 @@ authenticator.get('/verifyEmail', async (req, res) => {
 authenticator.get('/setup', async (req, res) => {
     try {
         // Verify token:
-        const email = jwt.verify(req.query.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        const email = jwt.verify(req.query.token, process.env.JWT_SECRET, { ignoreExpiration: false }).email;
         res.json(email);
     }
     catch (error) {
@@ -181,7 +180,7 @@ authenticator.post('/createAccount', async (req, res) => {
             return;
         }
         // Verify token:
-        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).email;
         // Check if user exists:
         const existingUser = await User.findOne({ "info.email": email });
         if (existingUser) {
@@ -229,7 +228,7 @@ authenticator.get('/resetPassword', async (req, res) => {
         return;
     }
     // Create token from email:
-    const emailToken = await jwt.sign({ ID: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
+    const emailToken = await jwt.sign({ email: email }, process.env.JWT_SECRET, { expiresIn: '30m' });
     // Send token as link to email:
     const link = process.env.PUBLIC_URL + "/user/reset/" + emailToken;
     const options = {
@@ -270,7 +269,7 @@ authenticator.get('/resetPassword', async (req, res) => {
 authenticator.get('/resetPage', async (req, res) => {
     try {
         // Verify token:
-        const email = jwt.verify(req.query.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        const email = jwt.verify(req.query.token, process.env.JWT_SECRET, { ignoreExpiration: false }).email;
         res.json(email);
     }
     catch (error) {
@@ -285,7 +284,7 @@ authenticator.post('/reset', async (req, res) => {
             return;
         }
         // Verify token:
-        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        const email = jwt.verify(req.body.token, process.env.JWT_SECRET, { ignoreExpiration: false }).email;
         // Update user info:
         try {
             const existingUser = await User.findOne({ "info.email": email });
@@ -328,7 +327,7 @@ async function validateUser(token) {
     try {
         // Verify token:
         const ID = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
-        const existingUser = await User.findOne({ ID: ID });
+        const existingUser = await User.findOne({ _id: ID });
         if (existingUser) {
             return existingUser;
         }

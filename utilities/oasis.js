@@ -4,8 +4,7 @@ const oasis = express.Router();
 
 // Setup:
 const { validateUser } = require('./authenticator.js');
-const { Oasis } = require('./database.js');
-const { v4: uuidv4 } = require("uuid");
+const { Oasis, ObjectId } = require('./database.js');
 
 // Endpoints:
 oasis.get('/homeView', async (req, res) => {
@@ -17,17 +16,17 @@ oasis.get('/homeView', async (req, res) => {
     }
     // Find IDs of oases:
     let oasisIDs = [];
-    if (req.type === "all") {
+    if (req.query.type === "all") {
         oasisIDs = existingUser.oasis.ownOases.concat(existingUser.oasis.joinedOases);
     } 
-    else if (req.type === "own") {
+    else if (req.query.type === "own") {
         oasisIDs = existingUser.oasis.ownOases;
     }
-    else if (req.type === "archived") {
+    else if (req.query.type === "archived") {
         oasisIDs = existingUser.oasis.archivedOases;
     }
     // Grab oases summaries (exclude content and users):
-    const oasesSummaries = await Oasis.find({ ID: { $in: oasisIDs } }, { users: 0, content: 0 });
+    const oasesSummaries = await Oasis.find({ _id: { $in: oasisIDs } }, { users: 0, content: 0 });
     // Return user info:
     res.json(oasesSummaries);
 })
@@ -44,32 +43,31 @@ oasis.post('/createOasis', async (req, res) => {
             title: req.body.title,
             description: req.body.description
         },
-        users: { owner: existingUser.ID },
-        ID: uuidv4()
+        users: { owner: existingUser._id },
     });
     // Save oasis, update user:
     try {
-        existingUser.oasis.ownOases.push(newOasis.ID);
         await newOasis.save();
+        existingUser.oasis.ownOases.push(newOasis._id);
         await existingUser.save();
     }
     catch (error) {
-        console.log(error);
         res.status(400).json({ error: "Unable to create oasis - please retry in a moment." });
         return;
     }
     // Return ID:
-    res.json({ ID: newOasis.ID });
+    res.json({ ID: newOasis._id });
 })
 oasis.post('/getTemplateOasis', async (req, res) => {
     // Create template oasis:
+    const ID = new ObjectId();
     const newOasis = new Oasis({
         info: {
             title: req.body.title,
             description: req.body.description
         },
         users: { owner: null },
-        ID: uuidv4()
+        _id: ID
     });
     // Return oasis:
     res.json(newOasis);
