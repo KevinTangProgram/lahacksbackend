@@ -37,7 +37,7 @@ const OSettingsSchema = new Schema ({
         type: Array,
         default: []
     }
-})
+}, { _id: false })
 const OSizeSchema = new Schema({
     ideaCount: {
         type: Number,
@@ -63,15 +63,15 @@ const OStateSchema = new Schema({
     },
     createDate: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     lastViewDate: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     lastEditDate: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     archiveDate: {
         type: Number,
@@ -111,7 +111,7 @@ const ORawMessageSchema = new Schema({
     },
     Timestamp: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     Sender: {
         type: Schema.Types.ObjectId,

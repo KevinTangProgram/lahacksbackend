@@ -31,6 +31,15 @@ oasis.get('/homeView', async (req, res) => {
     res.json(oasesSummaries);
 })
 oasis.post('/createOasis', async (req, res) => {
+    // Sanitize input:
+    if (validateInput("title", req.body.title) !== true) {
+        res.status(400).json({ error: validateInput("title", req.query.title) });
+        return;
+    }
+    if (validateInput("description", req.body.description) !== true) {
+        res.status(400).json({ error: validateInput("description", req.query.description) });
+        return;
+    }
     // Validate user:
     const existingUser = await validateUser(req.body.token);
     if (!existingUser) {
@@ -59,12 +68,24 @@ oasis.post('/createOasis', async (req, res) => {
     res.json({ ID: newOasis._id });
 })
 oasis.post('/getTemplateOasis', async (req, res) => {
+    // Sanitize input:
+    if (validateInput("title", req.body.title) !== true) {
+        res.status(400).json({ error: validateInput("title", req.query.title) });
+        return;
+    }
+    if (validateInput("description", req.body.description) !== true) {
+        res.status(400).json({ error: validateInput("description", req.query.description) });
+        return;
+    }
     // Create template oasis:
     const ID = new ObjectId();
     const newOasis = new Oasis({
         info: {
             title: req.body.title,
             description: req.body.description
+        },
+        settings: {
+            sharing: "local"
         },
         users: { owner: null },
         _id: ID
@@ -73,6 +94,23 @@ oasis.post('/getTemplateOasis', async (req, res) => {
     res.json(newOasis);
 })
 // Utils:
-
+function validateInput(type, input) {
+    if (type === "title") {
+        const minLength = 3;
+        const maxLength = 20;
+        const nonWhitespaceInput = input.replace(/\s/g, "");
+        if (nonWhitespaceInput.length < minLength || input.length > maxLength) {
+            return "Title must be between " + minLength + " and " + maxLength + " non-whitespace characters long."
+        }
+        return true;
+    }
+    if (type === "description") {
+        const maxLength = 100;
+        if (input.length > maxLength) {
+            return "Description must be less than " + maxLength + " characters long."
+        }
+        return true;
+    }
+}
 
 module.exports = oasis;

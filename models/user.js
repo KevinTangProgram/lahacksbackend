@@ -55,11 +55,11 @@ const UStatsSchema = new Schema ({
     },
     joinDate: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     lastLogin: {
         type: Number,
-        default: Date.now()
+        default: Date.now
     },
     loginAmount: {
         type: Number,
