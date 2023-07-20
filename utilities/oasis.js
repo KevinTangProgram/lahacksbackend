@@ -50,7 +50,7 @@ oasis.post('/createOasis', async (req, res) => {
     const newOasis = new Oasis({
         info: {
             title: req.body.title,
-            description: req.body.description
+            description: req.body.description | ""
         },
         users: { owner: existingUser._id },
     });
@@ -61,6 +61,7 @@ oasis.post('/createOasis', async (req, res) => {
         await existingUser.save();
     }
     catch (error) {
+        console.log(error);
         res.status(400).json({ error: "Unable to create oasis - please retry in a moment." });
         return;
     }
