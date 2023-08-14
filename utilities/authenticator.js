@@ -16,9 +16,10 @@ const transporter = nodemailer.createTransport({
         pass: process.env.ZOHO_PASSWORD
     }
 });
-const emailCooldownCache = [];
-const emailCooldown = 1000 * 59 * 1; // 59 seconds
-const cacheMaxSize = 10;
+const NodeCache = require("node-cache");
+const emailCooldownCache = new NodeCache({ stdTTL: 59 }); // email cooldown should be 59 seconds.
+const userValidationCache = new NodeCache({ stdTTL: 120, useClones: false }); // only need to re-validate with database every 2 minutes.
+
 
 // Endpoints:
     // Logins:
@@ -323,12 +324,22 @@ async function createAccount(req) {
     }
     return user;
 }
-async function validateUser(token) {
+async function validateUser(token, useCache = false) {
     try {
         // Verify token:
         const ID = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: false }).ID;
+        // Check cache:
+        if (useCache === true) {
+            const cachedUser = userValidationCache.get(ID);
+            if (cachedUser) {
+                return cachedUser;
+            } 
+        }
+        // Check database:
         const existingUser = await User.findOne({ _id: ID });
         if (existingUser) {
+            // Cache user:
+            userValidationCache.set(ID, existingUser);
             return existingUser;
         }
         return false;
@@ -338,32 +349,22 @@ async function validateUser(token) {
     }
 }
 function checkEmailCooldown(email, ip) {
-    const time = Date.now();
-    // Loop through array of {email, ip, time} objects:
-    for (let i = 0; i < emailCooldownCache.length; i++) {
-        // Check if email or ip match:
-        if (emailCooldownCache[i].email === email || emailCooldownCache[i].ip === ip) {
-            // Check if time is within 5 minutes:
-            if (time - emailCooldownCache[i].time < emailCooldown) {
-                return true;
-            }
-            else {
-                // Update time:
-                emailCooldownCache[i].time = time;
-                return false;
-            }
-        }    
-    }   
-    return false;
+    // Check if both email or ip is in cache, removing if true:
+    const emailKey = `email-${email}`;
+    const ipKey = `ip-${ip}`;
+    let inCache = emailCooldownCache.take(emailKey);
+    inCache = emailCooldownCache.take(ipKey) || inCache;
+    // Re-add to cache:
+    emailCooldownCache.set(emailKey, true);
+    emailCooldownCache.set(ipKey, true);
+    return inCache;
 }
 function cacheEmailCooldown(email, ip) {
     // Add to cache:
-    const time = Date.now();
-    if (emailCooldownCache.length >= cacheMaxSize) {
-        // Remove first element:
-        emailCooldownCache.shift();
-    }
-    emailCooldownCache.push({ email: email, ip: ip, time: time });
+    const emailKey = `email-${email}`;
+    const ipKey = `ip-${ip}`;
+    emailCooldownCache.set(emailKey, true);
+    emailCooldownCache.set(ipKey, true);
 }
 function validateInput(type, input) {
     const hasBadChars = (input) => {

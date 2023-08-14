@@ -10,6 +10,7 @@
     "google-auth-library": "^8.9.0",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.4",
+    "node-cache": "^5.1.2",
     "nodemailer": "^6.9.3",
     "openai": "^3.2.1",
     "uuid": "^9.0.0"

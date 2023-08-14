@@ -30,6 +30,51 @@ oasis.get('/homeView', async (req, res) => {
     // Return user info:
     res.json(oasesSummaries);
 })
+oasis.get('/access', async (req, res) => {
+    // Validate user:
+    const existingUser = await validateUser(req.query.token);
+    // Find oasis:
+    try {
+        const oasis = await Oasis.findById(req.query.UUID);
+        if (!oasis) {
+            res.status(400).json({ error: "The requested oasis does not exist - please recheck your URL." });
+            return;
+        }
+        // See if oasis should be accessed by user:
+        if (!existingUser) {
+            // Guest user:
+            if (oasis.settings.sharing == "public") {
+                res.json(oasis);
+            }
+            else {
+                res.status(400).json({ error: "You don't have permission to access this oasis - are you logged in?" });
+                return;
+            }
+        }
+        else {
+            // Logged in user:
+            if (oasis.users.owner.equals(existingUser._id)) {
+                res.json(oasis);
+                return;
+            }
+            if (oasis.users.editors.includes(existingUser._id)) {
+                res.json(oasis);
+                return;
+            }
+            if (oasis.users.viewers.includes(existingUser._id)) {
+                res.json(oasis);
+                return;
+            }
+        }
+        // Unable to access oasis:
+        res.status(400).json({ error: "You don't have permission to access this oasis - double check your account." });
+        return;
+    }
+    catch (error) {
+        res.status(400).json({ error: "Problem accessing oasis - please retry in a moment." });
+        return;
+    }
+})
 oasis.post('/createOasis', async (req, res) => {
     // Sanitize input:
     if (validateInput("title", req.body.title) !== true) {
@@ -50,7 +95,7 @@ oasis.post('/createOasis', async (req, res) => {
     const newOasis = new Oasis({
         info: {
             title: req.body.title,
-            description: req.body.description | ""
+            description: req.body.description
         },
         users: { owner: existingUser._id },
     });
@@ -94,6 +139,58 @@ oasis.post('/getTemplateOasis', async (req, res) => {
     // Return oasis:
     res.json(newOasis);
 })
+oasis.post('/push', async (req, res) => {
+    // Validate user:
+    const existingUser = await validateUser(req.body.token);
+    if (!existingUser) {
+        res.status(400).json({ error: "Unable to validate user - please log in again." });
+        return;
+    }
+    // Find oasis:
+    try {
+        const oasis = await Oasis.findById(req.body.oasisInstance.UUID);
+         if (!oasis) {
+            res.status(400).json({ error: "The requested oasis does not exist - please recheck your URL." });
+            return;
+        }
+        // See if oasis should be accessed by user:
+        if (!existingUser) {
+            // Guest user:
+            if (oasis.settings.sharing == "public") {
+                await editOasis(oasis, req.body.oasisInstance);
+                res.json(0);
+            }
+            else {
+                res.status(400).json({ error: "You don't have permission to access this oasis - are you logged in?" });
+                return;
+            }
+        }
+        else {
+            // Logged in user:
+            if (oasis.users.owner.equals(existingUser._id)) {
+                await editOasis(oasis, req.body.oasisInstance);
+                res.json(0);
+                return;
+            }
+            if (oasis.users.editors.includes(existingUser._id)) {
+                await editOasis(oasis, req.body.oasisInstance);
+                res.json(0);
+                return;
+            }
+            if (oasis.users.viewers.includes(existingUser._id)) {
+                res.status(400).json({ error: "You don't have permission to edit this oasis - double check your account." });
+                return;
+            }
+        }
+        // Unable to access oasis:
+        res.status(400).json({ error: "You don't have permission to access this oasis - double check your account." });
+        return;
+    }
+    catch (error) {
+        res.status(400).json({ error: "Problem syncing to oasis - please retry in a moment." });
+        return;
+    }
+})
 // Utils:
 function validateInput(type, input) {
     if (type === "title") {
@@ -111,6 +208,18 @@ function validateInput(type, input) {
             return "Description must be less than " + maxLength + " characters long."
         }
         return true;
+    }
+}
+async function editOasis(oasis, oasisInstance) {
+    // Update oasis:
+    oasis.settings = oasisInstance.data.settings;
+    oasis.stats = oasisInstance.data.stats;
+    // Save oasis:
+    try {
+        await oasis.save();
+    }
+    catch (error) {
+        throw error;
     }
 }
 
