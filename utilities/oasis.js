@@ -9,7 +9,7 @@ const { Oasis, ObjectId } = require('./database.js');
 // Endpoints:
 oasis.get('/homeView', async (req, res) => {
     // Validate user:
-    const existingUser = await validateUser(req.query.token);
+    const existingUser = await validateUser(req.query.token, true);
     if (!existingUser) {
         res.status(400).json({ error: "Unable to validate user - please log in again." });
         return;
@@ -141,7 +141,7 @@ oasis.post('/getTemplateOasis', async (req, res) => {
 })
 oasis.post('/push', async (req, res) => {
     // Validate user:
-    const existingUser = await validateUser(req.body.token);
+    const existingUser = await validateUser(req.body.token, true);
     if (!existingUser) {
         res.status(400).json({ error: "Unable to validate user - please log in again." });
         return;
@@ -187,6 +187,7 @@ oasis.post('/push', async (req, res) => {
         return;
     }
     catch (error) {
+        console.log(error);
         res.status(400).json({ error: "Problem syncing to oasis - please retry in a moment." });
         return;
     }
