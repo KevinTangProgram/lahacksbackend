@@ -5,6 +5,9 @@ const oasis = express.Router();
 // Setup:
 const { validateUser } = require('./authenticator.js');
 const { Oasis, ObjectId } = require('./database.js');
+const NodeCache = require("node-cache");
+const oasisDataCache = new NodeCache({ stdTTL: 120, useClones: false }); // store data for 2 minutes.
+
 
 // Endpoints:
 oasis.get('/homeView', async (req, res) => {
@@ -31,47 +34,13 @@ oasis.get('/homeView', async (req, res) => {
     res.json(oasesSummaries);
 })
 oasis.get('/access', async (req, res) => {
-    // Validate user:
-    const existingUser = await validateUser(req.query.token);
-    // Find oasis:
+    // Validate this action:
     try {
-        const oasis = await Oasis.findById(req.query.UUID);
-        if (!oasis) {
-            res.status(400).json({ error: "The requested oasis does not exist - please recheck your URL." });
-            return;
-        }
-        // See if oasis should be accessed by user:
-        if (!existingUser) {
-            // Guest user:
-            if (oasis.settings.sharing == "public") {
-                res.json(oasis);
-            }
-            else {
-                res.status(400).json({ error: "You don't have permission to access this oasis - are you logged in?" });
-                return;
-            }
-        }
-        else {
-            // Logged in user:
-            if (oasis.users.owner.equals(existingUser._id)) {
-                res.json(oasis);
-                return;
-            }
-            if (oasis.users.editors.includes(existingUser._id)) {
-                res.json(oasis);
-                return;
-            }
-            if (oasis.users.viewers.includes(existingUser._id)) {
-                res.json(oasis);
-                return;
-            }
-        }
-        // Unable to access oasis:
-        res.status(400).json({ error: "You don't have permission to access this oasis - double check your account." });
-        return;
+        const oasis = await validateOasis(req.query.UUID, req.query.token, "view");
+        res.json(oasis);
     }
     catch (error) {
-        res.status(400).json({ error: "Problem accessing oasis - please retry in a moment." });
+        res.status(400).json({ error: error });
         return;
     }
 })
@@ -139,56 +108,15 @@ oasis.post('/getTemplateOasis', async (req, res) => {
     // Return oasis:
     res.json(newOasis);
 })
-oasis.post('/push', async (req, res) => {
-    // Validate user:
-    const existingUser = await validateUser(req.body.token, true);
-    if (!existingUser) {
-        res.status(400).json({ error: "Unable to validate user - please log in again." });
-        return;
-    }
-    // Find oasis:
+oasis.post('/push', async (req, res) => {   
+    // Validate this action:
     try {
-        const oasis = await Oasis.findById(req.body.oasisInstance.UUID);
-         if (!oasis) {
-            res.status(400).json({ error: "The requested oasis does not exist - please recheck your URL." });
-            return;
-        }
-        // See if oasis should be accessed by user:
-        if (!existingUser) {
-            // Guest user:
-            if (oasis.settings.sharing == "public") {
-                await editOasis(oasis, req.body.oasisInstance);
-                res.json(0);
-            }
-            else {
-                res.status(400).json({ error: "You don't have permission to access this oasis - are you logged in?" });
-                return;
-            }
-        }
-        else {
-            // Logged in user:
-            if (oasis.users.owner.equals(existingUser._id)) {
-                await editOasis(oasis, req.body.oasisInstance);
-                res.json(0);
-                return;
-            }
-            if (oasis.users.editors.includes(existingUser._id)) {
-                await editOasis(oasis, req.body.oasisInstance);
-                res.json(0);
-                return;
-            }
-            if (oasis.users.viewers.includes(existingUser._id)) {
-                res.status(400).json({ error: "You don't have permission to edit this oasis - double check your account." });
-                return;
-            }
-        }
-        // Unable to access oasis:
-        res.status(400).json({ error: "You don't have permission to access this oasis - double check your account." });
-        return;
+        const oasis = await validateOasis(req.body.UUID, req.body.token, "edit");
+        await updateOasis(oasis, req.body.oasisInstance, req.body.changelog);
+        res.json(0);
     }
     catch (error) {
-        console.log(error);
-        res.status(400).json({ error: "Problem syncing to oasis - please retry in a moment." });
+        res.status(400).json({ error: error });
         return;
     }
 })
@@ -211,16 +139,78 @@ function validateInput(type, input) {
         return true;
     }
 }
-async function editOasis(oasis, oasisInstance) {
-    // Update oasis:
-    oasis.settings = oasisInstance.data.settings;
-    oasis.stats = oasisInstance.data.stats;
-    // Save oasis:
+
+async function validateOasis(oasisID, userToken, accessType) {
+    // Validate user:
+    const useCache = (accessType === "edit"); // only cache if editing
+    const existingUser = await validateUser(userToken, useCache);
+    // Find oasis:
+    let oasis;
     try {
-        await oasis.save();
+        const cachedOasis = oasisDataCache.get(oasisID);
+        if (cachedOasis) {
+            // Found in cache:
+            oasis = cachedOasis;
+        } 
+        else {
+            oasis = await Oasis.findById(oasisID);
+            if (!oasis) {
+                throw "The requested oasis does not exist - please recheck your URL.";
+            }
+            // Found in database, add to cache:
+            oasisDataCache.set(oasisID, oasis);
+        }
     }
     catch (error) {
-        throw error;
+        throw "Problem accessing oasis - please retry in a moment.";
+    }
+    // Validate user permissions:
+    if (oasis.settings.sharing == "public") {
+        // Anyone can view/edit public oases:
+        return oasis;
+    }
+    if (!existingUser) {
+        // You must be logged in to view/edit non-public oases:
+        throw "You don't have permission to access this oasis - are you logged in?";
+    }
+    if (oasis.users.owner.equals(existingUser._id) || oasis.users.editors.includes(existingUser._id)) {
+        // Owner and editors can view/edit:
+        return oasis;
+    }
+    if (accessType === "view" && oasis.users.viewers.includes(existingUser._id)) {
+        // Viewers can view:
+        return oasis;
+    }
+    // None of the above are met, unable to access oasis:
+    throw "You don't have permission to access this oasis - are you logged in?";
+}
+
+async function updateOasis(oasis, oasisInstance, changelog) {
+    // Save oasis:
+    try {
+        const updater = {
+            stats: oasisInstance.stats,
+        };
+        for (const property of changelog) {
+            updater[property] = oasisInstance[property];
+        }
+        // Update stats:
+        updater.stats.state.lastEditDate = Date.now();
+        // Update oasis in database:
+        const updateResult = await Oasis.updateOne({_id: oasis._id}, { $set: updater });
+        if (updateResult.modifiedCount !== 1) {
+            // Invalidate cache:
+            oasisDataCache.del(oasis._id.toString());
+            throw "Sorry, there was a problem syncing to oasis - retrying...";
+        }
+        // Update oasis in cache:
+        for (const property in updater) {
+            oasis[property] = updater[property];
+        }
+    }
+    catch (error) {
+        console.log(error);
+        throw "Sorry, there was a problem syncing to oasis - retrying...";
     }
 }
 
