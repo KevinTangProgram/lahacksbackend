@@ -162,7 +162,10 @@ async function validateOasis(oasisID, userToken, accessType) {
         }
     }
     catch (error) {
-        throw "Problem accessing oasis - please retry in a moment.";
+        if (typeof error === "string") {
+            throw error;
+        }   
+        throw "Problem accessing oasis - please recheck your URL.";
     }
     // Validate user permissions:
     if (oasis.settings.sharing == "public") {
