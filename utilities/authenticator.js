@@ -291,6 +291,7 @@ authenticator.post('/reset', async (req, res) => {
             const existingUser = await User.findOne({ "info.email": email });
             existingUser.info.password = hashed(req.body.password);
             existingUser.save();
+            refreshUserCache(existingUser._id);
             // Create custom JWT:
             const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
             // Return user info:
@@ -347,6 +348,22 @@ async function validateUser(token, useCache = false) {
     catch (error) {
         return false;
     }
+}
+async function addOasisToUser(oasisID, existingUser) {
+    try {
+        await User.updateOne(
+            { _id: existingUser._id },
+            { $push: { 'oasis.ownOases': oasisID } }
+        );
+        refreshUserCache(existingUser._id.toString());
+    }
+    catch (error) {
+        throw "Problem updating user"
+    }
+}
+
+function refreshUserCache(ID) {
+    userValidationCache.del(ID);
 }
 function checkEmailCooldown(email, ip) {
     // Check if both email or ip is in cache, removing if true:
@@ -420,4 +437,4 @@ function hashed(password) {
 }
 
 
-module.exports = { authenticator, validateUser};
+module.exports = { authenticator, validateUser, addOasisToUser };

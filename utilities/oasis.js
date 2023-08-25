@@ -3,11 +3,13 @@ const express = require('express');
 const oasis = express.Router();
 
 // Setup:
-const { validateUser } = require('./authenticator.js');
+const { validateUser, addOasisToUser } = require('./authenticator.js');
 const { Oasis, ObjectId } = require('./database.js');
 const NodeCache = require("node-cache");
-const oasisDataCache = new NodeCache({ stdTTL: 120, useClones: false }); // store data for 2 minutes.
+const oasisDataCache = new NodeCache({ stdTTL: 120, useClones: false }); // oasis editing: store data for 2 minutes.
 
+// Consts:
+const MAX_OASIS_COUNT = 25;
 
 // Endpoints:
 oasis.get('/homeView', async (req, res) => {
@@ -45,42 +47,59 @@ oasis.get('/access', async (req, res) => {
     }
 })
 oasis.post('/createOasis', async (req, res) => {
-    // Sanitize input:
-    if (validateInput("title", req.body.title) !== true) {
-        res.status(400).json({ error: validateInput("title", req.query.title) });
-        return;
-    }
-    if (validateInput("description", req.body.description) !== true) {
-        res.status(400).json({ error: validateInput("description", req.query.description) });
-        return;
-    }
     // Validate user:
     const existingUser = await validateUser(req.body.token);
     if (!existingUser) {
         res.status(400).json({ error: "Unable to validate user - please log in again." });
         return;
     }
-    // Create oasis:
-    const newOasis = new Oasis({
-        info: {
-            title: req.body.title,
-            description: req.body.description
-        },
-        users: { owner: existingUser._id },
-    });
-    // Save oasis, update user:
-    try {
-        await newOasis.save();
-        existingUser.oasis.ownOases.push(newOasis._id);
-        await existingUser.save();
-    }
-    catch (error) {
-        console.log(error);
-        res.status(400).json({ error: "Unable to create oasis - please retry in a moment." });
+    // Check oasis count:
+    if (existingUser.oasis.ownOases.length >= MAX_OASIS_COUNT) {
+        res.status(400).json({ error: "We're sorry - only " + MAX_OASIS_COUNT + " synced oases are allowed per user." });
         return;
     }
-    // Return ID:
-    res.json({ ID: newOasis._id });
+    // Create oasisData:
+    const oasisData = {
+        info: {
+            title: req.body.title,
+            description: (req.body.description) ? req.body.description : ""
+        }
+    }
+    // Create oasis, return ID:
+    try {
+        const newOasis = await createOasis(existingUser, oasisData);
+        res.json({ ID: newOasis._id });
+    }
+    catch (error) {
+        res.status(400).json({ error: error });
+        return;
+    }
+})
+oasis.post('/syncLocalOases', async (req, res) => {
+    // Validate user:
+    const existingUser = await validateUser(req.body.token);
+    if (!existingUser) {
+        res.status(400).json({ error: "Unable to validate user - please log in again." });
+        return;
+    }
+    // Check oasis count:
+    if (existingUser.oasis.ownOases.length + req.body.localOases.length >= MAX_OASIS_COUNT) {
+        res.status(400).json({ error: "We're sorry - only " + MAX_OASIS_COUNT + " synced oases are allowed per user." });
+        return;
+    }
+    // Call createOasis for each oasis:
+    let numSynced = 0;
+    let errorOases = {};
+    for (let i = 0; i < req.body.localOases.length; i++) {
+        try {
+            await createOasis(existingUser, req.body.localOases[i]);
+            numSynced++;
+        }
+        catch (error) {
+            errorOases[req.body.localOases[i]._id] = error;
+        }
+    }
+    res.json({ numSynced: numSynced, errorOases: errorOases });
 })
 oasis.post('/getTemplateOasis', async (req, res) => {
     // Sanitize input:
@@ -124,7 +143,7 @@ oasis.post('/push', async (req, res) => {
 function validateInput(type, input) {
     if (type === "title") {
         const minLength = 3;
-        const maxLength = 20;
+        const maxLength = 40;
         const nonWhitespaceInput = input.replace(/\s/g, "");
         if (nonWhitespaceInput.length < minLength || input.length > maxLength) {
             return "Title must be between " + minLength + " and " + maxLength + " non-whitespace characters long."
@@ -140,6 +159,48 @@ function validateInput(type, input) {
     }
 }
 
+async function createOasis(existingUser, oasisData) {
+    // Creates an oasis from known info and save to database.
+
+    // Check if oasis already exists (if _id is provided):
+    if (oasisData._id) {
+        const existingOasis = await Oasis.findOne({ _id: oasisData._id });
+        if (existingOasis) {
+            throw "An oasis with the provided _id already exists.";
+        }
+    }
+    // Sanitize input:
+    if (validateInput("title", oasisData.info.title) !== true) {
+        throw validateInput("title", oasisData.info.title);
+    }
+    if (validateInput("description", oasisData.info.description) !== true) {
+        throw validateInput("description", oasisData.info.description);
+    }
+    // Add user to oasisData:
+    if (!oasisData.users) {
+        oasisData.users = { owner: existingUser._id};
+    }
+    else {
+        oasisData.users.owner = existingUser._id;
+    }
+    // Change oasis sharing settings:
+    if (oasisData.settings) {
+        oasisData.settings.sharing = "private";
+    }
+    // Create oasis:
+    try {
+        // Save oasis, update user:
+        const newOasis = new Oasis(oasisData);
+        await newOasis.save();
+        await addOasisToUser(newOasis._id, existingUser);
+        return newOasis;
+    }
+    catch (error) {
+        console.log(error);
+        throw "Unable to successfully create oasis - please retry in a moment.";
+    }
+}
+
 async function validateOasis(oasisID, userToken, accessType) {
     // Validate user:
     const useCache = (accessType === "edit"); // only cache if editing
@@ -148,7 +209,7 @@ async function validateOasis(oasisID, userToken, accessType) {
     let oasis;
     try {
         const cachedOasis = oasisDataCache.get(oasisID);
-        if (cachedOasis) {
+        if (cachedOasis && useCache) {
             // Found in cache:
             oasis = cachedOasis;
         } 
@@ -212,7 +273,6 @@ async function updateOasis(oasis, oasisInstance, changelog) {
         }
     }
     catch (error) {
-        console.log(error);
         throw "Sorry, there was a problem syncing to oasis - retrying...";
     }
 }

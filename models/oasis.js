@@ -9,7 +9,7 @@ const OInfoSchema = new Schema ({
     },
     description: {
         type: String,
-        required: true
+        default: ""
     },
     misc: {
         type: Array,
