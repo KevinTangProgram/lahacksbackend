@@ -75,6 +75,21 @@ oasis.post('/createOasis', async (req, res) => {
         return;
     }
 })
+oasis.post('/deleteOasis', async (req, res) => {
+    // Validate this action:
+    try {
+        const oasis = await validateOasis(req.body.UUID, req.body.token, "edit");
+        // Delete oasis:
+        await Oasis.deleteOne({ _id: oasis._id });
+        // Remove oasis from user:
+        await removeOasisFromUser(oasis._id, oasis.users.owner);
+        res.json(0);
+    }
+    catch (error) {
+        res.status(400).json({ error: error });
+        return;
+    }
+})
 oasis.post('/syncLocalOases', async (req, res) => {
     // Validate user:
     const existingUser = await validateUser(req.body.token);
