@@ -358,9 +358,22 @@ async function addOasisToUser(oasisID, existingUser) {
         refreshUserCache(existingUser._id.toString());
     }
     catch (error) {
-        throw "Problem updating user"
+        throw "Problem updating user - please retry in a moment."
     }
 }
+async function removeOasisFromUser(oasisID, existingUser) {
+    try {
+        await User.updateOne(
+            { _id: existingUser._id },
+            { $pull: { 'oasis.ownOases': oasisID } }
+        );
+        refreshUserCache(existingUser._id.toString());
+    }
+    catch (error) {
+        throw "Problem updating user - please retry in a moment."
+    }
+}
+
 
 function refreshUserCache(ID) {
     userValidationCache.del(ID);
@@ -437,4 +450,4 @@ function hashed(password) {
 }
 
 
-module.exports = { authenticator, validateUser, addOasisToUser };
+module.exports = { authenticator, validateUser, addOasisToUser, removeOasisFromUser };

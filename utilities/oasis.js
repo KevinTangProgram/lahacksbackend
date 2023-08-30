@@ -3,7 +3,7 @@ const express = require('express');
 const oasis = express.Router();
 
 // Setup:
-const { validateUser, addOasisToUser } = require('./authenticator.js');
+const { validateUser, addOasisToUser, removeOasisFromUser } = require('./authenticator.js');
 const { Oasis, ObjectId } = require('./database.js');
 const NodeCache = require("node-cache");
 const oasisDataCache = new NodeCache({ stdTTL: 120, useClones: false }); // oasis editing: store data for 2 minutes.
@@ -78,11 +78,11 @@ oasis.post('/createOasis', async (req, res) => {
 oasis.post('/deleteOasis', async (req, res) => {
     // Validate this action:
     try {
-        const oasis = await validateOasis(req.body.UUID, req.body.token, "edit");
+        const oasis = await validateOasis(req.body.UUID, req.body.token, "delete");
         // Delete oasis:
         await Oasis.deleteOne({ _id: oasis._id });
         // Remove oasis from user:
-        await removeOasisFromUser(oasis._id, oasis.users.owner);
+        await removeOasisFromUser(oasis._id, await validateUser(req.body.token, true));
         res.json(0);
     }
     catch (error) {
@@ -211,7 +211,6 @@ async function createOasis(existingUser, oasisData) {
         return newOasis;
     }
     catch (error) {
-        console.log(error);
         throw "Unable to successfully create oasis - please retry in a moment.";
     }
 }
@@ -244,24 +243,36 @@ async function validateOasis(oasisID, userToken, accessType) {
         throw "Problem accessing oasis - please recheck your URL.";
     }
     // Validate user permissions:
-    if (oasis.settings.sharing == "public") {
-        // Anyone can view/edit public oases:
-        return oasis;
+    const isOwner = (existingUser && oasis.users.owner.equals(existingUser._id));
+    const isEditor = (existingUser && oasis.users.editors.includes(existingUser._id));
+    const isViewer = (existingUser && oasis.users.viewers.includes(existingUser._id));
+    const sharing = oasis.settings.sharing;
+    if (accessType === "delete") {
+        if (isOwner) {
+            // Owner can delete oasis:
+            return oasis;
+        }
+        else {
+            throw "You don't have permission to delete this oasis - check your account.";
+        }
     }
-    if (!existingUser) {
-        // You must be logged in to view/edit non-public oases:
-        throw "You don't have permission to access this oasis - are you logged in?";
+    if (accessType === "edit") {
+        if (isOwner || isEditor || sharing === "public") {
+            return oasis;
+        }
+        else {
+            throw "You don't have permission to edit this oasis - check your account.";
+        }
     }
-    if (oasis.users.owner.equals(existingUser._id) || oasis.users.editors.includes(existingUser._id)) {
-        // Owner and editors can view/edit:
-        return oasis;
+    if (accessType === "view") {
+        if (isOwner || isEditor || isViewer || sharing === "public") {
+            return oasis;
+        }
+        else {
+            throw "You don't have permission to access this oasis - check your account.";
+        }
     }
-    if (accessType === "view" && oasis.users.viewers.includes(existingUser._id)) {
-        // Viewers can view:
-        return oasis;
-    }
-    // None of the above are met, unable to access oasis:
-    throw "You don't have permission to access this oasis - are you logged in?";
+    throw "An internal error occured - please retry in a moment.";
 }
 
 async function updateOasis(oasis, oasisInstance, changelog) {
