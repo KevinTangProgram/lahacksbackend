@@ -253,7 +253,7 @@ async function updateOasis(oasis, oasisInstance, changelog) {
     // Save oasis:
     try {
         const updater = {
-            stats: oasisInstance.stats,
+            stats: oasis.stats,
         };
         for (const property of changelog) {
             updater[property] = oasisInstance[property];
@@ -265,7 +265,7 @@ async function updateOasis(oasis, oasisInstance, changelog) {
         if (updateResult.modifiedCount !== 1) {
             // Invalidate cache:
             oasisDataCache.del(oasis._id.toString());
-            throw "Sorry, there was a problem syncing to oasis - retrying...";
+            throw "Sorry, there was a problem syncing to oasis - please retry in a moment.";
         }
         // Update oasis in cache:
         for (const property in updater) {
@@ -273,7 +273,7 @@ async function updateOasis(oasis, oasisInstance, changelog) {
         }
     }
     catch (error) {
-        throw "Sorry, there was a problem syncing to oasis - retrying...";
+        throw "Sorry, there was a problem syncing to oasis - please retry in a moment.";
     }
 }
 
