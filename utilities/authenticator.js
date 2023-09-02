@@ -102,6 +102,21 @@ authenticator.get('/continueWithGoogle', async (req, res) => {
         res.status(400).json({ error: 'Problem connecting to google or database - please try again in a moment.' });
     }
 })
+authenticator.get('/refresh', async (req, res) => {
+    // Validate token to get user:
+    const existingUser = await validateUser(req.query.token, true);
+    if (existingUser) {
+        // Return user info:
+        const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        res.json({
+            user: existingUser,
+            token: customToken,
+        });
+    }
+    else {
+        res.status(400).json({ error: 'Invalid or expired token - please log in again.' });
+    }
+});
     // Account creation:
 authenticator.get('/verifyEmail', async (req, res) => {
     // Sanitize input:
@@ -308,6 +323,27 @@ authenticator.post('/reset', async (req, res) => {
         res.status(400).json({ error: "We're sorry, your token just expired - please request a new password reset." });
     }
 })
+    // Settings:
+authenticator.post('/updateSettings', async (req, res) => {
+    // Validate token to get user:
+    const existingUser = await validateUser(req.body.token);
+    if (existingUser) {
+        // Update settings:
+        existingUser.settings = req.body.settings;
+        try {
+            await existingUser.save();
+            refreshUserCache(existingUser._id);
+            res.json(0);
+        }
+        catch (error) {
+            console.log(error);
+            res.status(400).json({ error: 'Problem updating settings - please try again in a moment.' });
+        }
+    }
+    else {
+        res.status(400).json({ error: 'Invalid or expired token - please log in again.' });
+    }
+});
 // Utils:
 async function createAccount(req) {
     const user = new User({
@@ -355,7 +391,7 @@ async function addOasisToUser(oasisID, existingUser) {
             { _id: existingUser._id },
             { $push: { 'oasis.ownOases': oasisID } }
         );
-        refreshUserCache(existingUser._id.toString());
+        refreshUserCache(existingUser._id);
     }
     catch (error) {
         throw "Problem updating user - please retry in a moment."
@@ -367,7 +403,7 @@ async function removeOasisFromUser(oasisID, existingUser) {
             { _id: existingUser._id },
             { $pull: { 'oasis.ownOases': oasisID } }
         );
-        refreshUserCache(existingUser._id.toString());
+        refreshUserCache(existingUser._id);
     }
     catch (error) {
         throw "Problem updating user - please retry in a moment."
@@ -376,7 +412,7 @@ async function removeOasisFromUser(oasisID, existingUser) {
 
 
 function refreshUserCache(ID) {
-    userValidationCache.del(ID);
+    userValidationCache.del(ID.toString());
 }
 function checkEmailCooldown(email, ip) {
     // Check if both email or ip is in cache, removing if true:
