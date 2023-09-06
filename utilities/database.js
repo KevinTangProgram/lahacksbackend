@@ -4,8 +4,16 @@ const Oasis = require("../models/oasis");
 const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 
-// Endpoints:
-
+// Functions:
+const dependencyFuncs = {};
+    // Current runtime-registered dependencies are:
+    // addOasisToUser (oasis.js), removeOasisFromUser (user.js), deleteOasesOfUser (user.js).
+function registerDependency(funcName, func) {
+    dependencyFuncs[funcName] = func;
+}
+function getDependency(funcName) {
+    return dependencyFuncs[funcName];
+}
 
 // Exports:
-module.exports = { User, Oasis, ObjectId };
+module.exports = { User, Oasis, ObjectId, registerDependency, getDependency };

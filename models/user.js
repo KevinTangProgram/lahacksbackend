@@ -25,15 +25,15 @@ const USettingsSchema = new Schema ({
     },
     notification: {
         type: String,
-        default: null
+        default: false
     },
     oasisSort: {
         type: String,
         default: "recent"
     },
     privacy: {
-        type: String,
-        default: null
+        type: Object,
+        default: {profile: "private"}
     },
     misc: {
         type: Array,

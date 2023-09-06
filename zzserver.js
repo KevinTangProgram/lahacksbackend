@@ -33,7 +33,7 @@ app.use('/oasis/generate', prompter);
 const { authenticator } = require('./utilities/authenticator.js');
 app.use('/user', authenticator);
 // Oasis:
-const oasis = require('./utilities/oasis.js');
+const { oasis } = require('./utilities/oasis.js');
 app.use('/oasis', oasis);
 
 // Endpoints:

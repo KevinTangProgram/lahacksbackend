@@ -4,7 +4,7 @@ const oasis = express.Router();
 
 // Setup:
 const { validateUser, addOasisToUser, removeOasisFromUser } = require('./authenticator.js');
-const { Oasis, ObjectId } = require('./database.js');
+const { Oasis, ObjectId, registerDependency } = require('./database.js');
 const NodeCache = require("node-cache");
 const oasisDataCache = new NodeCache({ stdTTL: 120, useClones: false }); // oasis editing: store data for 2 minutes.
 
@@ -80,9 +80,7 @@ oasis.post('/deleteOasis', async (req, res) => {
     try {
         const oasis = await validateOasis(req.body.UUID, req.body.token, "delete");
         // Delete oasis:
-        await Oasis.deleteOne({ _id: oasis._id });
-        // Remove oasis from user:
-        await removeOasisFromUser(oasis._id, await validateUser(req.body.token, true));
+        await deleteOasisFromUser(oasis._id, req.body.token);
         res.json(0);
     }
     catch (error) {
@@ -173,7 +171,6 @@ function validateInput(type, input) {
         return true;
     }
 }
-
 async function createOasis(existingUser, oasisData) {
     // Creates an oasis from known info and save to database.
 
@@ -204,9 +201,11 @@ async function createOasis(existingUser, oasisData) {
     }
     // Create oasis:
     try {
-        // Save oasis, update user:
+        // Save oasis, add to cache: 
         const newOasis = new Oasis(oasisData);
         await newOasis.save();
+        addToCache(newOasis);
+        // Update user, return:
         await addOasisToUser(newOasis._id, existingUser);
         return newOasis;
     }
@@ -214,7 +213,6 @@ async function createOasis(existingUser, oasisData) {
         throw "Unable to successfully create oasis - please retry in a moment.";
     }
 }
-
 async function validateOasis(oasisID, userToken, accessType) {
     // Validate user:
     const useCache = (accessType === "edit"); // only cache if editing
@@ -233,7 +231,7 @@ async function validateOasis(oasisID, userToken, accessType) {
                 throw "The requested oasis does not exist - please recheck your URL.";
             }
             // Found in database, add to cache:
-            oasisDataCache.set(oasisID, oasis);
+            addToCache(oasis);
         }
     }
     catch (error) {
@@ -274,7 +272,6 @@ async function validateOasis(oasisID, userToken, accessType) {
     }
     throw "An internal error occured - please retry in a moment.";
 }
-
 async function updateOasis(oasis, oasisInstance, changelog) {
     // Save oasis:
     try {
@@ -290,7 +287,7 @@ async function updateOasis(oasis, oasisInstance, changelog) {
         const updateResult = await Oasis.updateOne({_id: oasis._id}, { $set: updater });
         if (updateResult.modifiedCount !== 1) {
             // Invalidate cache:
-            oasisDataCache.del(oasis._id.toString());
+            removeFromCache(oasis);
             throw "Sorry, there was a problem syncing to oasis - please retry in a moment.";
         }
         // Update oasis in cache:
@@ -302,5 +299,49 @@ async function updateOasis(oasis, oasisInstance, changelog) {
         throw "Sorry, there was a problem syncing to oasis - please retry in a moment.";
     }
 }
+async function deleteOasisFromUser(oasisID, userToken) {
+    // Delete oasis:
+    try {
+        // Remove oasis from user:
+        await removeOasisFromUser(oasisID, await validateUser(userToken, true));
+        // Delete oasis:
+        await Oasis.deleteOne({ _id: oasisID });
+        // Invalidate cache:
+        removeFromCache(oasisID);
+    }
+    catch (error) {
+        console.log(error);
+        throw "Sorry, there was a problem deleting oasis - please retry in a moment.";
+    }
+}
+async function deleteOasesOfUser(oasisIDs) {
+    // Delete oases:
+    try {
+        // Delete oases:
+        await Oasis.deleteMany({ _id: { $in: oasisIDs } });
+        // Invalidate cache:
+        for (const oasisID of oasisIDs) {
+            removeFromCache(oasisID);
+        }
+    }
+    catch (error) {
+        throw "Sorry, there was a problem deleting oases - please retry in a moment.";
+    }
+}
+function addToCache(oasis) {
+    oasisDataCache.set(oasis._id.toString(), oasis);
+}
+function removeFromCache(oasisOrID) {
+    if (oasisOrID instanceof ObjectId) {
+        oasisDataCache.del(oasisOrID.toString());
+    }
+    else {
+        oasisDataCache.del(oasisOrID._id.toString());
+    }
+}
 
-module.exports = oasis;
+
+// Dependency exports:
+registerDependency("deleteOasesOfUser", deleteOasesOfUser);
+// Normal Exports:
+module.exports = { oasis };

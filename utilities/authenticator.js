@@ -6,7 +6,7 @@ const authenticator = express.Router();
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto-js');
-const { User } = require('./database.js');
+const { User, getDependency } = require('./database.js');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
@@ -306,7 +306,7 @@ authenticator.post('/reset', async (req, res) => {
             const existingUser = await User.findOne({ "info.email": email });
             existingUser.info.password = hashed(req.body.password);
             existingUser.save();
-            refreshUserCache(existingUser._id);
+            invalidateUserCache(existingUser._id);
             // Create custom JWT:
             const customToken = await jwt.sign({ ID: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
             // Return user info:
@@ -323,21 +323,44 @@ authenticator.post('/reset', async (req, res) => {
         res.status(400).json({ error: "We're sorry, your token just expired - please request a new password reset." });
     }
 })
-    // Settings:
-authenticator.post('/updateSettings', async (req, res) => {
+    // Update user info:
+authenticator.post('/updateUser', async (req, res) => {
     // Validate token to get user:
     const existingUser = await validateUser(req.body.token);
     if (existingUser) {
-        // Update settings:
-        existingUser.settings = req.body.settings;
+        // Update specific information:
+        existingUser.settings = req.body.user.settings;
+        existingUser.info.username = req.body.user.info.username;
         try {
             await existingUser.save();
-            refreshUserCache(existingUser._id);
+            invalidateUserCache(existingUser._id);
             res.json(0);
         }
         catch (error) {
             console.log(error);
-            res.status(400).json({ error: 'Problem updating settings - please try again in a moment.' });
+            res.status(400).json({ error: 'Problem updating user info - please try again in a moment.' });
+        }
+    }
+    else {
+        res.status(400).json({ error: 'Invalid or expired token - please log in again.' });
+    }
+});
+    // Delete account:
+authenticator.post('/deleteAccount', async (req, res) => {
+    // Validate token to get user:
+    const existingUser = await validateUser(req.body.token);
+    if (existingUser) {
+        try {
+            // Delete user's oases:
+            const deleteOasesOfUser = getDependency("deleteOasesOfUser");
+            await deleteOasesOfUser(existingUser.oasis.ownOases);
+            // Delete user: 
+            await User.deleteOne({ _id: existingUser._id });
+            invalidateUserCache(existingUser._id);
+            res.json(0);
+        }
+        catch (error) {
+            res.status(400).json({ error: 'Problem deleting account - please try again in a moment.' });
         }
     }
     else {
@@ -375,6 +398,8 @@ async function validateUser(token, useCache = false) {
         // Check database:
         const existingUser = await User.findOne({ _id: ID });
         if (existingUser) {
+            // Handle schema changes:
+            handleSchemaChanges(existingUser);
             // Cache user:
             userValidationCache.set(ID, existingUser);
             return existingUser;
@@ -391,7 +416,7 @@ async function addOasisToUser(oasisID, existingUser) {
             { _id: existingUser._id },
             { $push: { 'oasis.ownOases': oasisID } }
         );
-        refreshUserCache(existingUser._id);
+        invalidateUserCache(existingUser._id);
     }
     catch (error) {
         throw "Problem updating user - please retry in a moment."
@@ -403,7 +428,7 @@ async function removeOasisFromUser(oasisID, existingUser) {
             { _id: existingUser._id },
             { $pull: { 'oasis.ownOases': oasisID } }
         );
-        refreshUserCache(existingUser._id);
+        invalidateUserCache(existingUser._id);
     }
     catch (error) {
         throw "Problem updating user - please retry in a moment."
@@ -411,7 +436,14 @@ async function removeOasisFromUser(oasisID, existingUser) {
 }
 
 
-function refreshUserCache(ID) {
+function handleSchemaChanges(existingUser) {
+    // 9/2/2023: 
+        // Changed user.settings.privacy field from type string to an object {profile: "private"}:
+    if (existingUser.settings.privacy === null) {
+        existingUser.settings.privacy = { profile: "private" };
+    }
+}   
+function invalidateUserCache(ID) {
     userValidationCache.del(ID.toString());
 }
 function checkEmailCooldown(email, ip) {
