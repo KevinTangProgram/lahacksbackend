@@ -39,6 +39,8 @@ oasis.get('/access', async (req, res) => {
     // Validate this action:
     try {
         const oasis = await validateOasis(req.query.UUID, req.query.token, "view");
+        oasis.stats.state.lastViewDate = Date.now();
+        await oasis.save();
         res.json(oasis);
     }
     catch (error) {
@@ -195,9 +197,12 @@ async function createOasis(existingUser, oasisData) {
     else {
         oasisData.users.owner = existingUser._id;
     }
-    // Change oasis sharing settings:
+    // Change exising oasis data:
     if (oasisData.settings) {
         oasisData.settings.sharing = "private";
+    }
+    if (oasisData.stats) {
+        oasisData.stats.state.lastViewDate = Date.now();
     }
     // Create oasis:
     try {
